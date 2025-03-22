@@ -1,0 +1,14 @@
+[project]
+name = "token-view"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "accelerate>=1.5.2",
+    "bitsandbytes>=0.45.3",
+    "fastapi>=0.115.11",
+    "torch>=2.6.0",
+    "transformers>=4.49.0",
+    "uvicorn[standard]>=0.34.0",
+]
