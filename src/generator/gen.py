@@ -1,4 +1,6 @@
 from typing import Callable, Literal
+from dataclasses import dataclass
+import typing
 
 import numpy as np
 import torch
@@ -8,6 +10,20 @@ from src.model.wrapper import ControlTokenTypes, ModelWrapper
 
 type TokenType = ControlTokenTypes | Literal["prompt"] | None
 type StreamCallback = Callable[[str, TokenType], bool | None]
+
+
+@dataclass
+class StepResult:
+    index: int
+    token: str
+    token_id: int
+    confidence: float
+    all_tokens_ids: list[int]
+    all_tokens: list[str]
+    all_confidences: list[float]
+    stop: bool = False
+    prompt: bool = False
+    manual: bool = False
 
 
 def DefaultStreamCallback(token: str, token_type: TokenType) -> bool | None:
@@ -35,54 +51,23 @@ class Generator:
     ):
         self.model = model
         self.default_max_tokens = default_max_tokens
+        self.max_tokens = default_max_tokens
         self.topk = topk
         self.force_greedy = force_greedy
         self.thr = thr
         self.stop_tokens = stop_tokens
         self.device = self.model.m.device
+        self.generation_results: list[StepResult] = []
+        self.last_token_index = 0
 
-    def generate(
-        self,
-        prompt: str,
-        max_tokens=None,
-        stream: StreamCallback | bool | None = None,
-        log_metric=False,
-        repeatition_limit=None,
-    ):
-        self.prompt = prompt
-        input = self.model.str_to_input(prompt, return_tensors="pt").to(
-            self.device
-        )
-        self.input_ids = input.input_ids
-        self.attention_mask = input.attention_mask
-
-        self.tok_conf_list = []
-        self.repeatition_limit = repeatition_limit
-
-        start_time = time.time()
-
-        if stream is True:
-            stream = DefaultStreamCallback
-
-        assert stream is None or callable(stream)
-        if stream:
-            stream(prompt + "\033[36;7m░\033[0m", "prompt")
-
-        for _ in range(max_tokens or self.default_max_tokens):
-            stop = self._loop(
-                stream=stream,
-            )
-            if stop:
-                # self.tok_conf_list.pop()
-                break
-
-        elapsed = time.time() - start_time
-        token_count = len(self.tok_conf_list)
-        if stream == True:
-            print()
-
-        if log_metric:
-            self._log_metrics(elapsed, token_count)
+    def reset(self):
+        print("GENERATOR: Resetting ...")
+        self.prompt = None
+        self.max_tokens = self.default_max_tokens
+        self.generation_results = []
+        self.repeatition_limit = None
+        self.last_token_index = 0
+        self.model.reset()
 
     def generate_yield(
         self,
@@ -93,16 +78,28 @@ class Generator:
         repeatition_limit=None,
     ):
         self.prompt = prompt
-        input = self.model.str_to_input(prompt, return_tensors="pt").to(
-            self.device
-        )
-        self.input_ids = input.input_ids
-        self.attention_mask = input.attention_mask
+        self.max_tokens = max_tokens or self.default_max_tokens
 
-        self.tok_conf_list = []
+        self.generation_results = []
         self.repeatition_limit = repeatition_limit
+        self.last_token_index = 0
 
-        start_time = time.time()
+        input_ids = self.model.str_to_input(self.prompt).input_ids
+        for prompt_token_id in typing.cast(list[int], input_ids):
+            prompt_token = self.model.ids_to_str(prompt_token_id)
+            prompt_step_result = StepResult(
+                index=self.last_token_index,
+                token=prompt_token,
+                token_id=prompt_token_id,
+                confidence=1.0,
+                all_tokens_ids=[prompt_token_id],
+                all_tokens=[prompt_token],
+                all_confidences=[1.0],
+                prompt=True,
+            )
+            self.generation_results.append(prompt_step_result)
+            self.last_token_index += 1
+            yield prompt_step_result
 
         if stream is True:
             stream = DefaultStreamCallback
@@ -111,56 +108,110 @@ class Generator:
         if stream:
             stream(prompt + "\033[36;7m░\033[0m", "prompt")
 
-        for _ in range(max_tokens or self.default_max_tokens):
+        start_time = time.time()
+        for _ in range(self.max_tokens):
             stop = self._loop(
                 stream=stream,
             )
-            last_token_id, last_conf, last_all_tok_ids, last_all_confs = self.tok_conf_list[-1]
-            last_token = self.model.ids_to_str(last_token_id)
-            last_all_tokens = [self.model.ids_to_str(tok_id) for tok_id in last_all_tok_ids]
-            yield {
-                "token": last_token,
-                "confidence": last_conf,
-                "all_tokens": last_all_tokens,
-                "all_confidences": last_all_confs,
-                "stop": stop,
-            }
+            last_result = self.generation_results[-1]
+            yield last_result
             if stop:
-                # self.tok_conf_list.pop()
-                print("<GENERATOR: Stopping ...>")
                 break
 
         elapsed = time.time() - start_time
-        token_count = len(self.tok_conf_list)
+        token_count = len(self.generation_results)
 
         if log_metric:
             self._log_metrics(elapsed, token_count)
+
+    def change_path_yield(
+        self,
+        index: int,
+        forced_token: str | None,
+    ):
+        self.generation_results = self.generation_results[:index]
+        self.last_token_index = index
+        print(f"GENERATOR: Changing path from index {index} ...")
+        print(f"GENERATOR: Forced token: {forced_token}")
+        print(
+            f"GENERATOR: Current path: {"".join([t.token for t in self.generation_results])}"
+        )
+
+        for step_result in self.generation_results:
+            yield step_result
+
+        if forced_token is not None:
+            manual_token_ids = self.model.str_to_input(forced_token, add_special_tokens=False).input_ids
+            for manual_token_id in typing.cast(list[int], manual_token_ids):
+                manual_token = self.model.ids_to_str(manual_token_id)
+                manual_step_result = StepResult(
+                    index=self.last_token_index,
+                    token=manual_token,
+                    token_id=manual_token_id,
+                    confidence=1.0,
+                    all_tokens_ids=[manual_token_id],
+                    all_tokens=[manual_token],
+                    all_confidences=[1.0],
+                    manual=True,
+                )
+                self.generation_results.append(manual_step_result)
+                self.last_token_index += 1
+                yield manual_step_result
+
+        remaining_token_count = self.max_tokens - len(self.generation_results)
+        for _ in range(remaining_token_count):
+            stop = self._loop()
+            last_result = self.generation_results[-1]
+            yield last_result
+            if stop:
+                break
+        print("\n", "=" * 80)
+        print("Generation finished.")
 
     def _loop(
         self,
         stream: StreamCallback | None = None,
     ):
-        logits = self.model.m(
-            input_ids=self.input_ids, attention_mask=self.attention_mask
-        ).logits
-        token_id, confidence, all_token_ids, all_confidences = self._process_logits(
-            logits, topn=self.topk, coeff=1
+        input_ids = (
+            torch.Tensor([t.token_id for t in self.generation_results])
+            .reshape(1, -1)
+            .long()
+            .to(self.device)
         )
-        self.tok_conf_list.append((token_id, confidence, all_token_ids, all_confidences))
-
+        attention_mask = torch.ones_like(input_ids).to(self.device)
+        logits = self.model.m(
+            input_ids=input_ids, attention_mask=attention_mask
+        ).logits
+        token_id, confidence, all_token_ids, all_confidences = (
+            self._process_logits(logits, topn=self.topk, coeff=1)
+        )
         decoded_token = self.model.ids_to_str(token_id)
         token_control_type = self.model.get_control_token_type(decoded_token)
+
+        step_result = StepResult(
+            index=self.last_token_index,
+            token=decoded_token,
+            token_id=token_id,
+            confidence=confidence,
+            all_tokens_ids=all_token_ids,
+            all_tokens=[
+                self.model.ids_to_str(tok_id) for tok_id in all_token_ids
+            ],
+            all_confidences=all_confidences,
+        )
+        self.generation_results.append(step_result)
+        self.last_token_index += 1
 
         callback_stop = False
         if stream:
             callback_stop = stream(decoded_token, token_control_type)
 
-        self._update_inpute_attention(token_id)
-
         should_stop = self._check_stop_token(decoded_token)
         return should_stop or callback_stop == True
 
-    def _process_logits(self, logits, topn=1, coeff=1):
+    def _process_logits(
+        self, logits, topn=1, coeff=1
+    ) -> tuple[int, float, list[int], list[float]]:
         logits = logits * coeff
         sf = torch.nn.functional.softmax(logits[:, -1, :], dim=-1)
         probs, indices = torch.topk(sf, topn)
@@ -175,31 +226,10 @@ class Generator:
 
         return token_id, confidence, indices.tolist(), probs.tolist()
 
-    def _update_inpute_attention(self, token_id):
-        self.input_ids = torch.cat(
-            (
-                self.input_ids,
-                torch.tensor(
-                    token_id.reshape(1, 1), device=self.input_ids.device
-                ),
-            ),
-            dim=-1,
-        )
-        self.attention_mask = torch.cat(
-            (
-                self.attention_mask,
-                torch.ones((1, 1), device=self.input_ids.device),
-            ),
-            dim=-1,
-        )
-
     def generation_to_str(self, attach_prompt=True):
         generation = self.prompt if attach_prompt else ""
-        for token_id, _ in self.tok_conf_list:
-            token = self.model.t.decode(
-                token_id, clean_up_tokenization_spaces=False
-            )
-            generation += f"{token}"
+        for step_result in self.generation_results:
+            generation += f"{step_result.token}"
 
         return generation
 

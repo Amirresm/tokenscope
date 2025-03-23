@@ -29,6 +29,7 @@ class ModelWrapper:
     def __init__(
         self,
         model_name: str,
+        device: str = "cuda",
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
@@ -53,17 +54,17 @@ class ModelWrapper:
                 torch_dtype="auto",
                 device_map="auto",
                 quantization_config=bnb_config,
-            )
+            ).to(device)
             self.t: TokenizerType = AutoTokenizer.from_pretrained(
                 self.model_name
             )
 
         self.control_tokens = {}
 
-    def str_to_input(self, text: str, **decode_kwargs) -> BatchEncoding:
+    def str_to_input(self, text: str, **decode_kwargs):
         return self.t(text, **decode_kwargs)
 
-    def ids_to_str(self, ids: torch.Tensor) -> str:
+    def ids_to_str(self, ids: int | list[int] | torch.Tensor) -> str:
         return self.t.decode(ids)
 
     def get_control_token(self, control: ControlTokenTypes) -> Tuple[str, int]:
@@ -80,6 +81,10 @@ class ModelWrapper:
         )
         return ttype
 
+    def reset(self):
+        gc.collect()
+        torch.cuda.empty_cache()
+
     def unload(self):
         del self.m
         del self.t
@@ -91,11 +96,12 @@ class LlamaModelWrapper(ModelWrapper):
     def __init__(
         self,
         model_name: str,
+        device: str = "cuda",
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
     ):
-        super().__init__(model_name, model, tokenizer, q4bit)
+        super().__init__(model_name, device, model, tokenizer, q4bit)
         self.control_tokens = {
             ControlTokenTypes.BOS: self.t.bos_token,
             ControlTokenTypes.EOS: self.t.eos_token,

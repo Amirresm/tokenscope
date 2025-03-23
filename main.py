@@ -14,7 +14,7 @@ def custom():
     print("\n\n\n")
 
     for token in generator.generate_yield("How to make a cake", max_tokens=10, log_metric=True):
-        print(token["token"], end="", flush=True)
+        print(token.token, end="", flush=True)
 
 
 def main():
@@ -27,7 +27,8 @@ def main():
         from src.server.server import create_app
 
         app = create_app()
-        uvicorn.run(app, host="0.0.0.0", port=3000)
+        # uvicorn.run(app, host="0.0.0.0", port=3000)
+        uvicorn.run(app, host="0.0.0.0", port=3000, workers=1, loop="asyncio")
     else:
         custom()
 
