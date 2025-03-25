@@ -1,92 +1,75 @@
 import React from "react";
 import { DynamicTextarea } from "./DynamicTextarea";
-import { signal } from "@preact/signals-react";
 import generationStore from "../store/generationStore";
-
-const handleStream = async (response: Response) => {
-    if (!response.body) {
-        console.error("No body in response");
-        return;
-    }
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-            break;
-        }
-
-        const textList = decoder.decode(value).split("\n");
-        textList.forEach((text) => {
-            if (text === "") {
-                return;
-            }
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (error) {
-                console.log("Error:", error);
-                console.log("Text:", text);
-                return;
-            }
-            console.log(data);
-            const token = data.token;
-            const confidence = data.confidence;
-            const allTokens = data.all_tokens;
-            const allConfidences = data.all_confidences;
-            const isStop = data.stop;
-            const isPrompt = data.prompt;
-            const isManual = data.manual;
-            const tokenIndex = data.index;
-
-	    generationStore.appendToGeneration({
-		token,
-		index: tokenIndex,
-		confidence,
-		allTokens,
-		allConfidences,
-		stop: isStop,
-		prompt: isPrompt,
-		manual: isManual,
-	    })
-        });
-    }
-};
-
+import { handleStream } from "../api/generation";
 
 export function PromptInput() {
+    const abortRef = React.useRef<AbortController>(new AbortController());
     const [value, setValue] = React.useState("");
+
+    const [isGenerating, setIsGenerating] = React.useState(false);
+    const [shouldResume, setShouldResume] = React.useState(false);
+    const lastToken = generationStore.lastGeneratedTokenSignal.value?.index;
 
     const handleChange = React.useCallback((v: string) => {
         setValue(v);
     }, []);
 
     const handleSubmit = React.useCallback(async () => {
-	generationStore.clearGeneration();
-        const response = await fetch("http://10.0.0.92:3000/api/generate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                prompt: value,
-                max_tokens: 200,
-            }),
-        });
-        if (!response.ok) {
-            console.error("Error:", response.statusText);
+        if (isGenerating) {
+            abortRef.current.abort();
+            abortRef.current = new AbortController();
+            setIsGenerating(false);
+            setShouldResume(true);
             return;
         }
-	handleStream(response);
-    }, [value]);
+        generationStore.clearGeneration();
+        setIsGenerating(true);
+        if (shouldResume) {
+            setShouldResume(false);
+            const response = await fetch("http://10.0.0.92:3000/api/continue", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    index: lastToken,
+                }),
+                signal: abortRef.current.signal,
+            });
+            if (!response.ok) {
+                console.error("Error:", response.statusText);
+                return;
+            }
+            await handleStream(response, generationStore.appendToGeneration);
+        } else {
+            const response = await fetch("http://10.0.0.92:3000/api/generate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    prompt: value,
+                    max_tokens: 200,
+                }),
+                signal: abortRef.current.signal,
+            });
+            if (!response.ok) {
+                console.error("Error:", response.statusText);
+                return;
+            }
+            await handleStream(response, generationStore.appendToGeneration);
+        }
+        setIsGenerating(false);
+    }, [isGenerating, lastToken, shouldResume, value]);
 
     return (
-        <div className="flex flex-col justify-end gap-4  max-w-[1000px]">
+        <div className="">
             <DynamicTextarea value={value} onChange={handleChange} />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 sticky top-4 mt-4">
                 <button className="btn">Reset</button>
                 <button className="btn btn-neutral" onClick={handleSubmit}>
-                    Submit
+                    {isGenerating ? "Stop" : "Generate"}
                 </button>
             </div>
         </div>

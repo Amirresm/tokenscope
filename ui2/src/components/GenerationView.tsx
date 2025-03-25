@@ -22,7 +22,9 @@ function GenerationToken(props: GenerationTokenProps) {
 
     const handleClick = React.useCallback(() => {
         drawerStore.openDrawer();
-    }, []);
+        drawerStore.setDrawerTab("generation");
+        generationStore.setActiveGeneration(generationToken);
+    }, [generationToken]);
 
     const textColor = React.useMemo(() => {
         const textColor = prompt
@@ -65,22 +67,19 @@ export function GenerationView() {
             >
                 {showColor ? "Hide" : "Show"} confidence colors
             </button>
-            <button
-                className="btn"
-                onClick={() =>
-                    (generationStore.generationStateSignal.value = [])
-                }
-            >
+            <button className="btn" onClick={generationStore.clearGeneration}>
                 Clear
             </button>
             <div className="whitespace-pre-wrap">
-                {generationStore.generationStateSignal.value.map((token) => (
-                    <GenerationToken
-						key={token.index}
-                        generationToken={token}
-                        showColor={showColor}
-                    />
-                ))}
+                {generationStore.currentGenerationSignal.value.map(
+                    (token) => (
+                        <GenerationToken
+                            key={token.index}
+                            generationToken={token}
+                            showColor={showColor}
+                        />
+                    ),
+                )}
             </div>
         </div>
     );

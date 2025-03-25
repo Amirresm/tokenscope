@@ -1,28 +1,43 @@
-import { signal } from "@preact/signals-react";
+import { computed, signal } from "@preact/signals-react";
 
 export type GenerationToken = {
     token: string;
-	index: number;
-	allTokens: string[];
-	allConfidences: number[];
+    index: number;
+    allTokens: string[];
+    allConfidences: number[];
     confidence: number;
-	stop: boolean;
-	prompt: boolean;
-	manual: boolean;
+    stop: boolean;
+    prompt: boolean;
+    manual: boolean;
 };
 
-const generationStateSignal = signal<GenerationToken[]>([]);
+const currentGenerationSignal = signal<GenerationToken[]>([]);
+
+const lastGeneratedTokenSignal = computed(() => {
+    const generation = currentGenerationSignal.value;
+    if (generation.length === 0) return null;
+    return generation[generation.length - 1];
+});
 
 function clearGeneration() {
-    generationStateSignal.value = [];
+    currentGenerationSignal.value = [];
 }
 
 function appendToGeneration(token: GenerationToken) {
-    generationStateSignal.value = [...generationStateSignal.value, token];
+    currentGenerationSignal.value = [...currentGenerationSignal.value, token];
+}
+
+const activeGenerationSignal = signal<GenerationToken | null>(null);
+
+function setActiveGeneration(token: GenerationToken | null) {
+    activeGenerationSignal.value = token;
 }
 
 export default {
-	generationStateSignal,
-	clearGeneration,
-	appendToGeneration,
-}
+    currentGenerationSignal,
+	lastGeneratedTokenSignal,
+    activeGenerationSignal,
+    clearGeneration,
+    appendToGeneration,
+    setActiveGeneration,
+};
