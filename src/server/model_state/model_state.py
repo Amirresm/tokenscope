@@ -1,5 +1,7 @@
 import json
 import threading
+from typing import Awaitable, Callable
+import asyncio
 
 
 from src.model.wrapper import ControlTokenTypes, LlamaModelWrapper
@@ -18,12 +20,22 @@ class ModelState:
             force_greedy=True,
         )
 
-    def generate(self, prompt: str, max_tokens: int):
+    async def generate(
+        self,
+        prompt: str,
+        max_tokens: int,
+        should_stop: Callable[[], Awaitable[bool]] | None = None,
+    ):
+        print("Waiting for model lock ...")
         with self.generate_lock:
+            print("Starting generation ...")
             self.generator.reset()
             for token in self.generator.generate_yield(
                 prompt, max_tokens=max_tokens, log_metric=True
             ):
+                if should_stop and await should_stop():
+                    print("Stopping generation ...")
+                    break
                 json_rep = {
                     "index": token.index,
                     "token": token.token,
@@ -39,10 +51,21 @@ class ModelState:
                 stringified_token.replace("\n", "\\n")
                 stringified_token += "\n"
                 yield stringified_token
+                await asyncio.sleep(0)
 
-    def continue_generate(self, index: int, forced_token: str):
+    async def continue_generate(
+        self,
+        index: int,
+        forced_token: str | None,
+        should_stop: Callable[[], Awaitable[bool]] | None = None,
+    ):
+        print("Waiting for model lock ...")
         with self.generate_lock:
+            print("Continuing generation ...")
             for token in self.generator.change_path_yield(index, forced_token):
+                if should_stop and await should_stop():
+                    print("Stopping generation ...")
+                    break
                 json_rep = {
                     "index": token.index,
                     "token": token.token,
@@ -58,3 +81,4 @@ class ModelState:
                 stringified_token.replace("\n", "\\n")
                 stringified_token += "\n"
                 yield stringified_token
+                await asyncio.sleep(0)

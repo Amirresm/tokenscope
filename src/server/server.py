@@ -16,20 +16,31 @@ async def generate(request: fastapi.Request, request_data: dict):
     max_tokens = request_data.get("max_tokens", 50)
     model_state = typing.cast(ModelState, request.state.model_state)
 
+    headers = {"X-Content-Type-Options": "nosniff"}
+
     return StreamingResponse(
-        model_state.generate(prompt, max_tokens), media_type="text/plain"
+        model_state.generate(
+            prompt, max_tokens, should_stop=request.is_disconnected
+        ),
+        headers=headers,
+        media_type="application/json",
     )
 
 
-@router.post("/continue_generate")
+@router.post("/continue")
 async def continue_generate(request: fastapi.Request, request_data: dict):
     index = request_data["index"]
-    forced_token = request_data["forced_token"]
+    forced_token = request_data.get("forced_token", None)
     model_state = typing.cast(ModelState, request.state.model_state)
 
+    headers = {"X-Content-Type-Options": "nosniff"}
+
     return StreamingResponse(
-        model_state.continue_generate(index, forced_token),
-        media_type="text/plain",
+        model_state.continue_generate(
+            index, forced_token, should_stop=request.is_disconnected
+        ),
+        headers=headers,
+        media_type="text/event-stream",
     )
 
 

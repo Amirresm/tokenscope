@@ -108,8 +108,9 @@ class Generator:
         if stream:
             stream(prompt + "\033[36;7m░\033[0m", "prompt")
 
+        remaining_token_count = self.max_tokens - len(self.generation_results)
         start_time = time.time()
-        for _ in range(self.max_tokens):
+        for _ in range(remaining_token_count):
             stop = self._loop(
                 stream=stream,
             )
@@ -131,17 +132,15 @@ class Generator:
     ):
         self.generation_results = self.generation_results[:index]
         self.last_token_index = index
-        print(f"GENERATOR: Changing path from index {index} ...")
-        print(f"GENERATOR: Forced token: {forced_token}")
-        print(
-            f"GENERATOR: Current path: {"".join([t.token for t in self.generation_results])}"
-        )
+        print(f"GENERATOR: Changing path from index {index} ... (with {forced_token})")
 
         for step_result in self.generation_results:
             yield step_result
 
         if forced_token is not None:
-            manual_token_ids = self.model.str_to_input(forced_token, add_special_tokens=False).input_ids
+            manual_token_ids = self.model.str_to_input(
+                forced_token, add_special_tokens=False
+            ).input_ids
             for manual_token_id in typing.cast(list[int], manual_token_ids):
                 manual_token = self.model.ids_to_str(manual_token_id)
                 manual_step_result = StepResult(
