@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.7",
     "@preact/signals-react": "^3.0.1",
     "@tailwindcss/vite": "^4.0.15",
     "react": "^19.0.0",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@preact/signals-react-transform": "^0.5.1",
+    "@tailwindcss/postcss": "^4.0.16",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

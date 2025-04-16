@@ -4,13 +4,23 @@ from typing import Awaitable, Callable
 import asyncio
 
 
-from src.model.wrapper import ControlTokenTypes, LlamaModelWrapper
-from src.generator.gen import Generator
+from src.model.wrapper import (
+    ControlTokenTypes,
+    LlamaModelWrapper,
+    QwenModelWrapper,
+)
+from src.generator.gen import Generator, StepResult
 
 
 class ModelState:
     def __init__(self, model_path: str) -> None:
-        wrapper = LlamaModelWrapper(model_path)
+        Wrapper = (
+            LlamaModelWrapper
+            if "llama" in model_path.lower()
+            else QwenModelWrapper if "qwen" in model_path.lower() else None
+        )
+        assert Wrapper is not None, f"Unsupported model: {model_path}"
+        wrapper = Wrapper(model_path, q4bit=True)
         self.generate_lock = threading.Lock()
 
         self.generator = Generator(
@@ -36,17 +46,7 @@ class ModelState:
                 if should_stop and await should_stop():
                     print("Stopping generation ...")
                     break
-                json_rep = {
-                    "index": token.index,
-                    "token": token.token,
-                    "confidence": token.confidence,
-                    "all_tokens_ids": token.all_tokens_ids,
-                    "all_tokens": token.all_tokens,
-                    "all_confidences": token.all_confidences,
-                    "stop": token.stop,
-                    "prompt": token.prompt,
-                    "manual": token.manual,
-                }
+                json_rep = token.to_json()
                 stringified_token = json.dumps(json_rep)
                 stringified_token.replace("\n", "\\n")
                 stringified_token += "\n"
@@ -55,28 +55,59 @@ class ModelState:
 
     async def continue_generate(
         self,
+        base: list[StepResult],
         index: int,
         forced_token: str | None,
+        max_tokens: int,
         should_stop: Callable[[], Awaitable[bool]] | None = None,
     ):
         print("Waiting for model lock ...")
         with self.generate_lock:
             print("Continuing generation ...")
-            for token in self.generator.change_path_yield(index, forced_token):
+            for token in self.generator.continue_yield(
+                base,
+                index,
+                forced_token,
+                max_tokens=max_tokens,
+                log_metric=True,
+            ):
                 if should_stop and await should_stop():
                     print("Stopping generation ...")
                     break
-                json_rep = {
-                    "index": token.index,
-                    "token": token.token,
-                    "confidence": token.confidence,
-                    "all_tokens_ids": token.all_tokens_ids,
-                    "all_tokens": token.all_tokens,
-                    "all_confidences": token.all_confidences,
-                    "stop": token.stop,
-                    "prompt": token.prompt,
-                    "manual": token.manual,
-                }
+                json_rep = token.to_json()
+                stringified_token = json.dumps(json_rep)
+                stringified_token.replace("\n", "\\n")
+                stringified_token += "\n"
+                yield stringified_token
+                await asyncio.sleep(0)
+
+    async def fim(
+        self,
+        base: list[StepResult],
+        start_index: int,
+        end_index: int,
+        replace_tokens: str | None,
+        max_tokens: int,
+        should_stop: Callable[[], Awaitable[bool]] | None = None,
+    ):
+        print("Waiting for model lock ...")
+        with self.generate_lock:
+            print("FIM ...")
+            print(f"start_index: {start_index}, end_index: {end_index}")
+            print(f"replace_tokens: {replace_tokens}")
+
+            for token in self.generator.fim_yield(
+                base,
+                start_index,
+                end_index,
+                replace_tokens,
+                max_tokens=max_tokens,
+                log_metric=True,
+            ):
+                if should_stop and await should_stop():
+                    print("Stopping generation ...")
+                    break
+                json_rep = token.to_json()
                 stringified_token = json.dumps(json_rep)
                 stringified_token.replace("\n", "\\n")
                 stringified_token += "\n"

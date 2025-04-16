@@ -9,7 +9,7 @@ type DrawerState = {
 
 const drawerStateSignal = signal<DrawerState>({
     open: false,
-    tab: null,
+    tab: "generation",
 });
 
 const drawerOpenSignal = computed(() => drawerStateSignal.value.open);

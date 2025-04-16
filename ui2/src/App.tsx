@@ -3,7 +3,6 @@ import { Sidebar } from "./components/sidebar/Sidebar";
 import drawerStore from "./store/drawerStore";
 
 function App() {
-    console.log(drawerStore.drawerStateSignal.value);
     return (
         <div
             className={`drawer drawer-end ${drawerStore.drawerOpenSignal.value ? "drawer-open" : ""}`}
@@ -15,7 +14,7 @@ function App() {
                 checked={drawerStore.drawerOpenSignal.value}
             />
             <div className="drawer-content transition-all">
-                <div className="p-4">
+                <div className="">
                     <LandingPage />
                 </div>
             </div>

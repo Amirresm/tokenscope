@@ -6,7 +6,6 @@ import gc
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    BatchEncoding,
     BitsAndBytesConfig,
     LlamaForCausalLM,
     LlamaTokenizerFast,
@@ -23,6 +22,10 @@ class ControlTokenTypes(Enum):
     EOH = "eoh_token"
     EOM = "eom_token"
     PYTHON = "python_token"
+
+    FIM_PREFIX = "fim_prefix_token"
+    FIM_SUFFIX = "fim_suffix_token"
+    FIM_MIDDLE = "fim_middle_token"
 
 
 class ModelWrapper:
@@ -72,7 +75,7 @@ class ModelWrapper:
         if token is None:
             raise ValueError(f"Control token '{control}' not found.")
         id = self.t.convert_tokens_to_ids(token)
-        assert id is int, f"Id is not int: {id}"
+        id = int(id[0]) if isinstance(id, list) else int(id)
         return (token, id)
 
     def get_control_token_type(self, token: str) -> ControlTokenTypes | None:
@@ -110,3 +113,22 @@ class LlamaModelWrapper(ModelWrapper):
             ControlTokenTypes.EOM: "<|eom_id|>",
             ControlTokenTypes.PYTHON: "<|python_tag|>",
         }
+
+class QwenModelWrapper(ModelWrapper):
+    def __init__(
+        self,
+        model_name: str,
+        device: str = "cuda",
+        model: Optional[ModelType] = None,
+        tokenizer: Optional[TokenizerType] = None,
+        q4bit: bool = False,
+    ):
+        super().__init__(model_name, device, model, tokenizer, q4bit)
+        self.control_tokens = {
+            ControlTokenTypes.BOS: self.t.bos_token,
+            ControlTokenTypes.EOS: self.t.eos_token,
+            ControlTokenTypes.FIM_PREFIX: "<|fim_prefix|>",
+            ControlTokenTypes.FIM_SUFFIX: "<|fim_suffix|>",
+            ControlTokenTypes.FIM_MIDDLE: "<|fim_middle|>",
+        }
+

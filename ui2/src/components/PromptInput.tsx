@@ -1,75 +1,132 @@
 import React from "react";
-import { DynamicTextarea } from "./DynamicTextarea";
+import DynamicTextarea from "./DynamicTextarea";
 import generationStore from "../store/generationStore";
-import { handleStream } from "../api/generation";
+import generationAPI from "../api/generationAPI";
+import { PaintBucket } from "@phosphor-icons/react";
 
 export function PromptInput() {
-    const abortRef = React.useRef<AbortController>(new AbortController());
     const [value, setValue] = React.useState("");
 
-    const [isGenerating, setIsGenerating] = React.useState(false);
-    const [shouldResume, setShouldResume] = React.useState(false);
-    const lastToken = generationStore.lastGeneratedTokenSignal.value?.index;
+    const isGenerating = generationStore.isGenerating.value;
+    const isPaused = generationStore.paused.value;
+
+    const lastTokenIndex =
+        generationStore.lastGeneratedTokenSignal.value?.index;
+    const hasGeneration = generationStore.hasGeneration.value;
+    const currentGeneration = generationStore.currentGenerationSignal.value;
 
     const handleChange = React.useCallback((v: string) => {
         setValue(v);
     }, []);
 
     const handleSubmit = React.useCallback(async () => {
+        // If generation is already in progress, pause
         if (isGenerating) {
-            abortRef.current.abort();
-            abortRef.current = new AbortController();
-            setIsGenerating(false);
-            setShouldResume(true);
+            generationStore.generationAbort.value?.abort();
+            generationStore.isGenerating.value = false;
+            generationStore.paused.value = true;
             return;
         }
+
         generationStore.clearGeneration();
-        setIsGenerating(true);
-        if (shouldResume) {
-            setShouldResume(false);
-            const response = await fetch("http://10.0.0.92:3000/api/continue", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    index: lastToken,
-                }),
-                signal: abortRef.current.signal,
+        generationStore.isGenerating.value = true;
+        generationStore.paused.value = false;
+
+        if (isPaused && lastTokenIndex !== undefined) {
+            generationStore.generationAbort.value = new AbortController();
+            await generationAPI.continueGeneration({
+				base: currentGeneration,
+                subIndex: lastTokenIndex,
+                maxTokens: generationStore.maxTokens.value,
+                abortSignal: generationStore.generationAbort.value,
+                handleData: generationStore.appendToGeneration,
             });
-            if (!response.ok) {
-                console.error("Error:", response.statusText);
-                return;
-            }
-            await handleStream(response, generationStore.appendToGeneration);
         } else {
-            const response = await fetch("http://10.0.0.92:3000/api/generate", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    prompt: value,
-                    max_tokens: 200,
-                }),
-                signal: abortRef.current.signal,
+            generationStore.selectedToken.value = undefined;
+            generationStore.generationAbort.value = new AbortController();
+            await generationAPI.generate({
+                prompt: value,
+                maxTokens: generationStore.maxTokens.value,
+                abortSignal: generationStore.generationAbort.value,
+                handleData: generationStore.appendToGeneration,
             });
-            if (!response.ok) {
-                console.error("Error:", response.statusText);
-                return;
-            }
-            await handleStream(response, generationStore.appendToGeneration);
         }
-        setIsGenerating(false);
-    }, [isGenerating, lastToken, shouldResume, value]);
+
+        generationStore.isGenerating.value = false;
+    }, [currentGeneration, isGenerating, isPaused, lastTokenIndex, value]);
+
+    const handleReset = React.useCallback(() => {
+        // setValue("");
+        generationStore.clearGeneration();
+        generationStore.isGenerating.value = false;
+        generationStore.paused.value = false;
+        if (generationStore.generationAbort.value) {
+            generationStore.generationAbort.value.abort();
+        }
+    }, []);
+
+    const colorVerbosityOptions = ["verbose", "normal", "none"] as const;
 
     return (
-        <div className="">
-            <DynamicTextarea value={value} onChange={handleChange} />
-            <div className="flex justify-end gap-2 sticky top-4 mt-4">
-                <button className="btn">Reset</button>
+        <div className="sticky z-10 top-0 px-4 pt-4 bg-base-100/50 backdrop-blur-lg">
+            <DynamicTextarea
+                value={value}
+                onChange={handleChange}
+                disabled={isPaused}
+                collapsed={hasGeneration}
+            />
+            <div className="flex gap-2 mt-4 items-center">
+                <div className="dropdown">
+                    <div tabIndex={0} role="button" className="btn m-1">
+                        <PaintBucket />
+                    </div>
+                    <ul
+                        tabIndex={0}
+                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                    >
+                        {colorVerbosityOptions.map((option) => (
+                            <li
+                                key={option}
+                                onClick={() =>
+                                    (generationStore.colorVerbosity.value =
+                                        option)
+                                }
+                            >
+                                <a>{option}</a>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                        generationStore.specialTokenFilter.value =
+                            !generationStore.specialTokenFilter.value;
+                    }}
+                >
+                    {generationStore.specialTokenFilter.value
+                        ? "Show Special"
+                        : "Hide Special"}
+                </button>
+                <div className="grow" />
+                <label className="input w-40">
+					<span className="text-gray-500">Max Tokens</span>
+                    <input
+                        type="number"
+                        min={0}
+                        value={generationStore.maxTokens.value}
+                        onChange={(e) =>
+                            (generationStore.maxTokens.value = parseInt(
+                                e.target.value,
+                            ))
+                        }
+                    />
+                </label>
+                <button className="btn" onClick={handleReset}>
+                    Reset
+                </button>
                 <button className="btn btn-neutral" onClick={handleSubmit}>
-                    {isGenerating ? "Stop" : "Generate"}
+                    {isGenerating ? "Pause" : isPaused ? "Resume" : "Generate"}
                 </button>
             </div>
         </div>
