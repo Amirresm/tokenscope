@@ -3,10 +3,10 @@ import { PromptInput } from "../PromptInput";
 
 export function LandingPage() {
     return (
-        <>
+        <div className="flex flex-col h-full">
             <PromptInput />
             <GenerationView />
-        </>
+        </div>
     );
 }
             //<label

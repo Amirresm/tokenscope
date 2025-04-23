@@ -176,7 +176,7 @@ const GenerationView = () => {
 
     return (
         <div
-            className="p-4"
+            className="grow overflow-y-auto p-4"
             onClick={() => (generationStore.selectedToken.value = undefined)}
         >
             <div className="whitespace-pre-wrap">

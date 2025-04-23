@@ -13,8 +13,10 @@
     "@phosphor-icons/react": "^2.1.7",
     "@preact/signals-react": "^3.0.1",
     "@tailwindcss/vite": "^4.0.15",
+    "@tanstack/react-query": "^5.74.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "simple-statistics": "^7.8.8",
     "tailwindcss": "^4.0.15"
   },
   "devDependencies": {

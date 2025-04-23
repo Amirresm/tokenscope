@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.providers.static_provider import StaticProvider
 from src.generator.gen import StepResult
 from src.server.model_state.model_state import ModelState
 
@@ -84,15 +85,42 @@ async def fim(request: fastapi.Request, request_data: dict):
     )
 
 
+@router.get("/fetch_projects")
+async def fetch_projects(request: fastapi.Request):
+    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+    projects = static_provider.get_project_names()
+    return {"projects": projects}
+
+
+@router.get("/get_project")
+async def get_project(request: fastapi.Request, project_name: str):
+    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+    project = static_provider.get_project_info(project_name)
+    return {"project": project}
+
+
+@router.get("/get_sample")
+async def get_sample(request: fastapi.Request, project_name: str, task_id: str):
+    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+    sample = static_provider.get_sample(project_name, task_id)
+    return {"sample": sample}
+
+
 def create_app():
     @asynccontextmanager
     async def lifespan(app: fastapi.FastAPI):
         model_path = (
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
-            "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
+            # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
+            "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-1.5B"
         )
         model_state = ModelState(model_path)
-        yield {"model_state": model_state}
+
+        static_provider = StaticProvider(
+            root_dir="/home/amirreza/projects/ubc/tl_code/results"
+        )
+
+        yield {"model_state": model_state, "static_provider": static_provider}
 
     app = fastapi.FastAPI(lifespan=lifespan)
     app.include_router(router, prefix="/api")

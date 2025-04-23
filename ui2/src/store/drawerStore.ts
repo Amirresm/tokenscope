@@ -1,6 +1,6 @@
 import { computed, signal } from "@preact/signals-react";
 
-type DrawerTab = "generation" | null;
+type DrawerTab = "generation" | "stats" | "projects" | null;
 
 type DrawerState = {
     open: boolean;
@@ -44,7 +44,7 @@ export function setDrawerTab(tab: DrawerTab) {
 
 export default {
     drawerStateSignal,
-	drawerOpenSignal,
+    drawerOpenSignal,
     toggleDrawer,
     closeDrawer,
     openDrawer,
