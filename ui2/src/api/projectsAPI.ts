@@ -28,6 +28,8 @@ type Sample = {
     tokens: GenerationToken[];
     passed?: boolean;
     details?: Record<string, unknown>;
+    tests?: string;
+    canonicalSolution?: string;
 };
 
 const fetchProjects = async () => {
@@ -107,6 +109,8 @@ const getSample = async ({
             taskId: data.sample.task_id,
             details: data.sample.details,
             passed: data.sample.passed,
+            tests: data.sample.tests,
+            canonicalSolution: data.sample.canonical_solution,
             tokens: data.sample.tokens.map((token: Record<string, any>) => ({
                 index: token.index,
                 token: token.token,

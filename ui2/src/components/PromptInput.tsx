@@ -35,9 +35,10 @@ export function PromptInput() {
         if (isPaused && lastTokenIndex !== undefined) {
             generationStore.generationAbort.value = new AbortController();
             await generationAPI.continueGeneration({
-				base: currentGeneration,
+                base: currentGeneration,
                 subIndex: lastTokenIndex,
                 maxTokens: generationStore.maxTokens.value,
+                attnLayer: generationStore.attnLayer.value,
                 abortSignal: generationStore.generationAbort.value,
                 handleData: generationStore.appendToGeneration,
             });
@@ -47,6 +48,7 @@ export function PromptInput() {
             await generationAPI.generate({
                 prompt: value,
                 maxTokens: generationStore.maxTokens.value,
+                attnLayer: generationStore.attnLayer.value,
                 abortSignal: generationStore.generationAbort.value,
                 handleData: generationStore.appendToGeneration,
             });
@@ -108,9 +110,36 @@ export function PromptInput() {
                         ? "Show Special"
                         : "Hide Special"}
                 </button>
+                <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                        generationStore.showLineInfo.value =
+                            !generationStore.showLineInfo.value;
+                    }}
+                >
+                    {generationStore.showLineInfo.value
+                        ? "Hide Line Info"
+                        : "Show Line Info"}
+                </button>
                 <div className="grow" />
                 <label className="input w-40">
-					<span className="text-gray-500">Max Tokens</span>
+                    <span className="text-gray-500">Attention Layer</span>
+                    <input
+                        type="number"
+                        value={generationStore.attnLayer.value}
+                        onChange={(e) => {
+                            if (e.target.value === "") {
+                                generationStore.attnLayer.value = undefined;
+                            } else {
+                                generationStore.attnLayer.value = parseInt(
+                                    e.target.value,
+                                );
+                            }
+                        }}
+                    />
+                </label>
+                <label className="input w-40">
+                    <span className="text-gray-500">Max Tokens</span>
                     <input
                         type="number"
                         min={0}

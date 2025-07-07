@@ -38,6 +38,7 @@ export default function FimPanel() {
             endIndex: fimEndToken || fimStartToken,
             replaceTokens: replaceToken,
             maxTokens: generationStore.maxTokens.value,
+			attnLayer: generationStore.attnLayer.value,
             abortSignal: generationStore.generationAbort.value,
             handleData: generationStore.appendToGeneration,
         });

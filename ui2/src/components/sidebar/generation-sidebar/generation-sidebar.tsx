@@ -26,6 +26,13 @@ const getColor = (confidence: number) =>
         return acc;
     }, "");
 
+function visualizeWhitespace(str: string) {
+    return str
+        .replace(/ /g, "␣") // space
+        .replace(/\t/g, "⇥") // tab
+        .replace(/\n/g, "⏎\n"); // newline
+}
+
 export function Content({ token }: { token: GenerationToken }) {
     const [substituteToken, setSubstituteToken] = React.useState("");
     const [generationMode, setGenerationMode] =
@@ -34,6 +41,18 @@ export function Content({ token }: { token: GenerationToken }) {
     const currentGeneration = generationStore.currentGenerationSignal.value;
     const nextToken = generationStore.nextToken.value;
     const prevToken = generationStore.previousToken.value;
+
+    const attentionTargetToken = generationStore.attentionTargetToken.value;
+    const attentionTargetHead = generationStore.attentionTargetHead.value;
+
+    const attentionTargetHeadCount =
+        currentGeneration.find(
+            (t) =>
+                t.attentionSnapshot?.length && t.attentionSnapshot.length > 0,
+        )?.attentionSnapshot?.length || 0;
+    const attentionTargetHeadOptions = [
+        ...Array(attentionTargetHeadCount).keys(),
+    ];
 
     const handleNextToken = React.useCallback(() => {
         if (nextToken) {
@@ -48,11 +67,15 @@ export function Content({ token }: { token: GenerationToken }) {
     }, [prevToken]);
 
     const handleSubstituteTokenChange = React.useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
+        (e: React.ChangeEvent<HTMLTextAreaElement>) => {
             setSubstituteToken(e.target.value);
         },
         [],
     );
+
+    const handleSetAttentionTargetToken = React.useCallback(() => {
+        generationStore.setAttentionTargetToken(token);
+    }, [token]);
 
     const handleSubstituteToken = React.useCallback(
         async (tokens: string) => {
@@ -72,6 +95,7 @@ export function Content({ token }: { token: GenerationToken }) {
                 subIndex: token.index,
                 subTokens: tokens,
                 maxTokens: generationStore.maxTokens.value,
+				attnLayer: generationStore.attnLayer.value,
                 abortSignal: generationStore.generationAbort.value,
                 handleData: generationStore.appendToGeneration,
             });
@@ -133,7 +157,9 @@ export function Content({ token }: { token: GenerationToken }) {
                 >
                     {token.confidence.toFixed(2)}
                 </div>
-                <div className="text-lg">{token.token}</div>
+                <div className="text-lg whitespace-pre">
+                    {visualizeWhitespace(token.token)}
+                </div>
             </div>
             <div className="flex flex-col gap-2 mt-4">
                 {token.tags.map((tag) => (
@@ -174,8 +200,7 @@ export function Content({ token }: { token: GenerationToken }) {
             </div>
             {generationMode === "continue" ? (
                 <div className="flex flex-col gap-2">
-                    <input
-                        type="text"
+                    <textarea
                         className="input"
                         placeholder="Enter token"
                         value={substituteToken}
@@ -191,6 +216,54 @@ export function Content({ token }: { token: GenerationToken }) {
             ) : generationMode === "fim" ? (
                 <FimPanel />
             ) : null}
+
+            <div className="divider" />
+            <div className="flex flex-col gap-2">
+                <div className="text-sm">
+                    {token.relativeAttention !== undefined
+                        ? `Relative Attention: ${token.relativeAttention?.toFixed(3)}`
+                        : "No Relative Attention"}
+                </div>
+                <div className="flex items-center">
+                    <div className="dropdown dropdown-top">
+                        <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-ghost btn-sm"
+                        >
+                            <span className={`${attentionTargetHeadCount === 0 ? "text-gray-500" : ""}`}>
+                                Head {attentionTargetHead}
+                            </span>
+                        </div>
+                        <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                        >
+                            {attentionTargetHeadOptions.map((option) => (
+                                <li
+                                    key={option}
+                                    onClick={() =>
+                                        generationStore.setAttentionTargetHead(
+                                            option,
+                                        )
+                                    }
+                                >
+                                    <a>{option}</a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <button
+                        className="btn btn-ghost grow"
+                        onClick={handleSetAttentionTargetToken}
+						disabled={attentionTargetHeadCount === 0}
+                    >
+                        {token.index === attentionTargetToken?.index
+                            ? "Remove Attention Target"
+                            : "Set Attention Target"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

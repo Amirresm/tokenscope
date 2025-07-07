@@ -35,6 +35,8 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
                 taskId: sample.taskId,
                 passed: sample.passed,
                 details: sample.details,
+				tests: sample.tests,
+				canonicalSolution: sample.canonicalSolution,
             };
 
             const tokens = sample.tokens;
@@ -46,6 +48,7 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
         [appendToGeneration, clearGeneration, projectName],
     );
 
+	console.log(sampleInfo)
     return projectInfoQuery.isLoading || !projectInfoQuery.data ? (
         <div className="loading">
             <p>Loading...</p>
@@ -107,11 +110,12 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
                 open modal
             </button>
             <dialog id="solution-modal" className="modal">
-                <div className="modal-box">
-                    <h3 className="font-bold text-lg">Hello!</h3>
-                    <p className="py-4">
-                        Press ESC key or click outside to close
-                    </p>
+                <div className="modal-box w-10/12 max-w-11/12">
+                    <h3 className="font-bold text-lg">Canonical Solution</h3>
+                    <p className="py-4 whitespace-break-spaces">{sampleInfo?.canonicalSolution}</p>
+                    <div className="divider"></div>
+                    <h3 className="font-bold text-lg">Tests</h3>
+                    <p className="py-4 whitespace-break-spaces">{sampleInfo?.tests}</p>
                 </div>
                 <form method="dialog" className="modal-backdrop">
                     <button>close</button>
@@ -198,7 +202,7 @@ const ProjectSidebar = () => {
     }, []);
 
     return (
-        <div className="w-full h-screen flex flex-col">
+        <div className="w-full h-full flex flex-col">
             {selectedProject ? (
                 <div className="flex items-center gap-2">
                     <button

@@ -16,7 +16,9 @@ router = fastapi.APIRouter()
 async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
     max_tokens = request_data.get("max_tokens", 200)
+    attn_layer = request_data.get("attn_layer", None)
     model_state = typing.cast(ModelState, request.state.model_state)
+    model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -35,9 +37,11 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
     index = request_data.get("index", None)
     forced_token = request_data.get("forced_token", None)
     max_tokens = request_data.get("max_tokens", 200)
+    attn_layer = request_data.get("attn_layer", None)
 
     base = [StepResult.from_json(step) for step in base]
     model_state = typing.cast(ModelState, request.state.model_state)
+    model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -61,6 +65,7 @@ async def fim(request: fastapi.Request, request_data: dict):
     end_index = request_data.get("end_index", None)
     replace_tokens = request_data.get("replace_tokens", None)
     max_tokens = request_data.get("max_tokens", 200)
+    attn_layer = request_data.get("attn_layer", None)
     if start_index is None or end_index is None:
         raise fastapi.HTTPException(
             status_code=400, detail="start_index and end_index are required"
@@ -68,6 +73,7 @@ async def fim(request: fastapi.Request, request_data: dict):
 
     base = [StepResult.from_json(step) for step in base]
     model_state = typing.cast(ModelState, request.state.model_state)
+    model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -111,6 +117,7 @@ def create_app():
     async def lifespan(app: fastapi.FastAPI):
         model_path = (
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
+            # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
             # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
             "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-1.5B"
         )

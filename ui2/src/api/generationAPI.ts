@@ -1,4 +1,4 @@
-import { GenerationToken } from "../store/generationStore";
+import generationStore, { GenerationToken } from "../store/generationStore";
 
 const serializeGenerationToken = (data: GenerationToken, index: number) => {
     return {
@@ -13,12 +13,14 @@ const serializeGenerationToken = (data: GenerationToken, index: number) => {
         stop: data.stop,
         prompt: data.prompt,
         manual: data.manual,
+        attention_snapshot: data.attentionSnapshot,
     };
 };
 
 const handleStream = async (
     response: Response,
     handleData: (data: GenerationToken) => void,
+    onComplete?: () => void,
 ) => {
     if (!response.body) {
         console.error("No body in response");
@@ -46,6 +48,15 @@ const handleStream = async (
                 return;
             }
 
+            const attentionSnapshot = data.attention_snapshot
+                ? data.attention_snapshot.map((snapshot: [number, string][]) =>
+                      snapshot.map((value) => ({
+                          index: value[0],
+                          attention: parseFloat(value[1]),
+                      })),
+                  )
+                : undefined;
+
             handleData({
                 index: data.index,
                 token: data.token,
@@ -58,20 +69,35 @@ const handleStream = async (
                 stop: data.stop,
                 prompt: data.prompt,
                 manual: data.manual,
+                attentionSnapshot,
             });
         });
     }
+    reader.releaseLock();
+    onComplete?.();
+    if (generationStore.attentionTargetToken.value) {
+        generationStore.updateAttentionTargetToken(
+            generationStore.attentionTargetHead.value,
+            generationStore.attentionTargetToken.value,
+        );
+    }
+    console.log("Stream finished");
+    return;
 };
 
 const generate = async ({
     prompt,
     maxTokens,
+    attnLayer,
     handleData,
+    onComplete,
     abortSignal,
 }: {
     prompt: string;
     maxTokens?: number;
+    attnLayer?: number;
     handleData: (data: GenerationToken) => void;
+    onComplete?: () => void;
     abortSignal?: AbortController;
 }) => {
     try {
@@ -83,6 +109,7 @@ const generate = async ({
             body: JSON.stringify({
                 prompt: prompt,
                 max_tokens: maxTokens || 200,
+                attn_layer: attnLayer ?? null,
             }),
             signal: abortSignal?.signal,
         });
@@ -90,7 +117,7 @@ const generate = async ({
             console.error("Error:", response.statusText);
             return;
         }
-        await handleStream(response, handleData);
+        await handleStream(response, handleData, onComplete);
     } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
             console.log("Generation aborted");
@@ -105,14 +132,18 @@ const continueGeneration = async ({
     subIndex,
     subTokens,
     maxTokens,
+    attnLayer,
     handleData,
+    onComplete,
     abortSignal,
 }: {
     base: GenerationToken[];
     subIndex: number;
     subTokens?: string;
     maxTokens?: number;
+    attnLayer?: number;
     handleData: (data: GenerationToken) => void;
+    onComplete?: () => void;
     abortSignal?: AbortController;
 }) => {
     try {
@@ -129,6 +160,7 @@ const continueGeneration = async ({
                 index: subIndex,
                 forced_token: subTokens,
                 max_tokens: maxTokens || 200,
+                attn_layer: attnLayer ?? null,
             }),
             signal: abortSignal?.signal,
         });
@@ -136,7 +168,7 @@ const continueGeneration = async ({
             console.error("Error:", response.statusText);
             return;
         }
-        await handleStream(response, handleData);
+        await handleStream(response, handleData, onComplete);
     } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
             console.log("Generation aborted");
@@ -152,7 +184,9 @@ const fim = async ({
     endIndex,
     replaceTokens,
     maxTokens,
+    attnLayer,
     handleData,
+    onComplete,
     abortSignal,
 }: {
     base: GenerationToken[];
@@ -160,7 +194,9 @@ const fim = async ({
     endIndex: number;
     replaceTokens: string;
     maxTokens?: number;
+    attnLayer?: number;
     handleData: (data: GenerationToken) => void;
+    onComplete?: () => void;
     abortSignal?: AbortController;
 }) => {
     try {
@@ -188,6 +224,7 @@ const fim = async ({
                 end_index: endIndex - numberOfSpecialTokensAfter,
                 replace_tokens: replaceTokens,
                 max_tokens: maxTokens || 200,
+                attn_layer: attnLayer ?? null,
             }),
             signal: abortSignal?.signal,
         });
@@ -195,7 +232,7 @@ const fim = async ({
             console.error("Error:", response.statusText);
             return;
         }
-        await handleStream(response, handleData);
+        await handleStream(response, handleData, onComplete);
     } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
             console.log("Generation aborted");

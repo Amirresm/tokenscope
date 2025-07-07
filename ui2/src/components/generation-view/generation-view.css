@@ -38,6 +38,21 @@
     box-shadow: 0 0 16px 4px var(--color-primary);
 }
 
+.attention-target-token {
+	z-index: 1;
+	@apply text-base-content;
+}
+
+.attention-target-token:before {
+	opacity: 1;
+	top: -4px;
+	bottom: -6px;
+	left: 0rem;
+	right: 0rem;
+	@apply bg-gray-800/30 border border-secondary rounded-field;
+	/* box-shadow: 0 0 16px 4px var(--color-primary); */
+}
+
 .active-token:after {
     content: "";
     opacity: 0;
@@ -81,8 +96,8 @@
 
 .token-arrow {
     position: absolute;
-	top: 3px;
-	cursor: pointer;
+    top: 3px;
+    cursor: pointer;
     @apply bg-base-200 rounded-field text-green-300;
 }
 

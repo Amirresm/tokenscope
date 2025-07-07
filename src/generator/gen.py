@@ -26,7 +26,19 @@ class StepResult:
     prompt: bool = False
     manual: bool = False
 
+    # attention_snapshot: list[list[list[float]]] | None = None
+    attention_snapshot: list[list[list[float]]] | None = None
+
     def to_json(self):
+        attention_snapshot = (
+            [
+                [[h[0], f"{h[1]:.3f}"] for h in head]
+                for head in self.attention_snapshot
+            ]
+            if self.attention_snapshot
+            else None
+        )
+
         return {
             "index": self.index,
             "token": self.token,
@@ -39,6 +51,7 @@ class StepResult:
             "stop": self.stop,
             "prompt": self.prompt,
             "manual": self.manual,
+            "attention_snapshot": attention_snapshot,
         }
 
     @staticmethod
@@ -82,6 +95,7 @@ class Generator:
         self.device = self.model.m.device
         self.generation_results: list[StepResult] = []
         self.last_token_index = 0
+        self.attn_layer = None
 
     def reset(self):
         print("GENERATOR: Resetting ...")
@@ -91,6 +105,9 @@ class Generator:
         self.repeatition_limit = None
         self.last_token_index = 0
         self.model.reset()
+
+    def set_attn_layer(self, attn_layer: int | None):
+        self.attn_layer = attn_layer
 
     def generate_yield(
         self,
@@ -352,14 +369,77 @@ class Generator:
             .to(self.device)
         )
         attention_mask = torch.ones_like(input_ids).to(self.device)
-        logits = self.model.m(
-            input_ids=input_ids, attention_mask=attention_mask
-        ).logits
+        output = self.model.m(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_attentions=True if self.attn_layer is not None else False,
+        )
+        logits = output.logits
+        attention = output.attentions
+
+        attention_snapshot = None
+        if attention is not None:
+            attn_top_n = 10
+            attn_layer = min(len(attention) - 1, self.attn_layer or 0)
+            num_heads = attention[attn_layer].shape[1]
+            last_layer_attention = attention[attn_layer]
+            current_tok_index = len(self.generation_results) - 1
+            attention_snapshot = []
+            sum_of_all_heads = []
+            for h in range(num_heads):
+                row = last_layer_attention[0, h, current_tok_index, :]
+                row_cpu = row.detach().cpu().float().numpy()
+                head_list = sorted(
+                    [[i, v] for i, v in enumerate(row_cpu)],
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
+                head_list = head_list[:attn_top_n]
+                attention_snapshot.append(head_list)
+
+                # doing this on CPU to avoid CUDA OOM
+                if len(sum_of_all_heads) == 0:
+                    sum_of_all_heads = row_cpu
+                else:
+                    sum_of_all_heads += row_cpu
+            sum_of_all_heads = sum_of_all_heads / num_heads
+            sum_of_all_heads = sorted(
+                [[i, v] for i, v in enumerate(sum_of_all_heads)],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            attention_snapshot.append(sum_of_all_heads[:attn_top_n])
+
+        # for h in range(12):
+        #     head_list = []
+        #     for i, token in enumerate(self.generation_results):
+        #         row = last_layer_attention[0, h, i, :]
+        #         attn_list = []
+        #         for j, att in enumerate(row):
+        #             att = att.item()
+        #             if att < 0.00001:
+        #                 continue
+        #             attn_list.append(att)
+        #             target_token = self.generation_results[j]
+        #             print(f"Token {token.token} -> {target_token.token}: {att}")
+        #         head_list.append(attn_list)
+        #     attention_snapshot.append(head_list)
+
         token_id, confidence, all_token_ids, all_confidences = (
             self._process_logits(logits, topn=self.topk, coeff=1)
         )
         decoded_token = self.model.ids_to_str(token_id)
         token_control_type = self.model.get_control_token_type(decoded_token)
+        # if "#" in decoded_token:
+        #     token_id, confidence, all_token_ids, all_confidences = (
+        #         self._process_logits(
+        #             logits, topn=self.topk, coeff=1, force_index=1
+        #         )
+        #     )
+        #     decoded_token = self.model.ids_to_str(token_id)
+        #     token_control_type = self.model.get_control_token_type(
+        #         decoded_token
+        #     )
 
         tags = []
         if token_control_type is not None:
@@ -376,6 +456,7 @@ class Generator:
             ],
             all_confidences=all_confidences,
             tags=tags,
+            attention_snapshot=attention_snapshot,
         )
         self.generation_results.append(step_result)
         self.last_token_index += 1
@@ -388,7 +469,7 @@ class Generator:
         return should_stop or callback_stop == True
 
     def _process_logits(
-        self, logits, topn=1, coeff=1
+        self, logits, topn=1, coeff=1, force_index=None
     ) -> tuple[int, float, list[int], list[float]]:
         logits = logits * coeff
         sf = torch.nn.functional.softmax(logits[:, -1, :], dim=-1)
@@ -397,7 +478,9 @@ class Generator:
         indices = indices.detach().cpu().numpy().reshape(-1)
         probs = probs / probs.sum()
         top_index = np.random.choice(topn, 1, p=probs)
-        if self.force_greedy:
+        if force_index is not None:
+            top_index = force_index
+        elif self.force_greedy:
             top_index = 0
         token_id = indices[top_index]
         confidence = probs[top_index].item()

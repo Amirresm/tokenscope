@@ -20,7 +20,7 @@ class ModelState:
             else QwenModelWrapper if "qwen" in model_path.lower() else None
         )
         assert Wrapper is not None, f"Unsupported model: {model_path}"
-        wrapper = Wrapper(model_path, q4bit=True)
+        wrapper = Wrapper(model_path, q4bit=False)
         self.generate_lock = threading.Lock()
 
         self.generator = Generator(

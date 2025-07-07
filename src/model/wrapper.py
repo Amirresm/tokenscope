@@ -57,10 +57,14 @@ class ModelWrapper:
                 torch_dtype="auto",
                 device_map="auto",
                 quantization_config=bnb_config,
+                # attn_implementation="eager",
             ).to(device)
             self.t: TokenizerType = AutoTokenizer.from_pretrained(
                 self.model_name
             )
+
+            # print model architecture
+            print(self.m)
 
         self.control_tokens = {}
 
@@ -114,6 +118,7 @@ class LlamaModelWrapper(ModelWrapper):
             ControlTokenTypes.PYTHON: "<|python_tag|>",
         }
 
+
 class QwenModelWrapper(ModelWrapper):
     def __init__(
         self,
@@ -131,4 +136,3 @@ class QwenModelWrapper(ModelWrapper):
             ControlTokenTypes.FIM_SUFFIX: "<|fim_suffix|>",
             ControlTokenTypes.FIM_MIDDLE: "<|fim_middle|>",
         }
-

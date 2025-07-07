@@ -6,6 +6,8 @@ const selectedSampleInfo = signal<{
     taskId: string;
     passed?: boolean;
     details?: Record<string, unknown>;
+	tests?: string;
+	canonicalSolution?: string;
 } | null>(null);
 
 export default {

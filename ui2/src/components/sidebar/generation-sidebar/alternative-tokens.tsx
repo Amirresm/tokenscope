@@ -1,5 +1,12 @@
 import { GenerationToken } from "../../../store/generationStore";
 
+function visualizeWhitespace(str: string) {
+    return str
+        .replace(/ /g, "␣") // space
+        .replace(/\t/g, "⇥") // tab
+        .replace(/\n/g, "⏎\n"); // newline
+}
+
 export default function AlternativeTokens({
     token,
     tokens,
@@ -24,7 +31,7 @@ export default function AlternativeTokens({
                                 className={`flex justify-between items-center p-1`}
                                 onClick={() => onClick(t)}
                             >
-                                <div>{t}</div>
+                                <div>{visualizeWhitespace(t)}</div>
                                 <div>{confidences[index].toFixed(2)}</div>
                             </a>
                         </li>

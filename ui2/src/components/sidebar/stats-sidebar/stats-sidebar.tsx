@@ -26,13 +26,18 @@ export default function StatsSidebar() {
         }
 
         const confAvg = ss.mean(tokens.map((token) => token.confidence));
+        const confGeometricMean = ss.geometricMean(
+            tokens.map((token) => token.confidence),
+        );
 
         const confStdev = ss.standardDeviation(
             tokens.map((token) => token.confidence),
         );
 
         return {
+            generatedTokensCount: tokens.length,
             confAvg,
+            confGeometricMean,
             confStdev,
         };
     }, [currentGeneration, fimEndIndex, fimStartIndex]);
@@ -82,6 +87,8 @@ export default function StatsSidebar() {
                 taskId: sample.taskId,
                 passed: sample.passed,
                 details: sample.details,
+                tests: sample.tests,
+                canonicalSolution: sample.canonicalSolution,
             };
 
             const tokens = sample.tokens;
@@ -100,9 +107,23 @@ export default function StatsSidebar() {
                     <h2 className="card-title">Stats</h2>
                     <div className="flex flex-col gap-1">
                         <div className="stat">
+                            <div className="stat-title">Generated Tokens</div>
+                            <div className="stat-value">
+                                {stats.generatedTokensCount}
+                            </div>
+                        </div>
+                        <div className="stat">
                             <div className="stat-title">Average Confidence</div>
                             <div className="stat-value">
                                 {stats.confAvg.toFixed(2)}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Geometric Mean Confidence
+                            </div>
+                            <div className="stat-value">
+                                {stats.confGeometricMean.toFixed(2)}
                             </div>
                         </div>
                         <div className="stat">

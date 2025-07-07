@@ -12,6 +12,8 @@ class Sample:
     tokens: list[StepResult]
     passed: bool | None = None
     details: dict | None = None
+    tests: str | None = None
+    canonical_solution: str | None = None
 
 
 @dataclass
@@ -64,6 +66,7 @@ class StaticProvider:
         full_generation_path = os.path.join(
             project_dir, "full_generation.jsonl"
         )
+        dataset_info_path = os.path.join(project_dir, "dataset_rows.jsonl")
         full_results_path = os.path.join(
             project_dir, f"samples_eval_results.json"
         )
@@ -103,6 +106,15 @@ class StaticProvider:
                 project.response_prefix = metadata.get("response_prefix")
                 project.id_range = metadata.get("id_range")
                 project.n_samples = metadata.get("n_samples")
+
+        if os.path.exists(dataset_info_path):
+            for data in stream_jsonl(dataset_info_path):
+                task_id = data.get("id")
+                assert task_id is not None, "task_id is required in the data"
+                sample = samples.get(task_id)
+                if sample is not None:
+                    sample.tests = data.get("test")
+                    sample.canonical_solution = data.get("canonical_solution")
 
         if os.path.exists(full_results_path) and os.path.exists(
             results_summary_path
@@ -180,4 +192,6 @@ class StaticProvider:
             "tokens": [step.to_json() for step in sample.tokens],
             "passed": sample.passed,
             "details": sample.details,
+            "tests": sample.tests,
+            "canonical_solution": sample.canonical_solution,
         }
