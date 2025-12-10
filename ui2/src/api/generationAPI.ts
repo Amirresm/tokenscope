@@ -10,9 +10,9 @@ const serializeGenerationToken = (data: GenerationToken, index: number) => {
         all_tokens: data.allTokens,
         all_confidences: data.allConfidences,
         tags: data.tags,
-        stop: data.stop,
-        prompt: data.prompt,
-        manual: data.manual,
+        stop: data.stop || data.tags.includes("stop"),
+        prompt: data.prompt || data.tags.includes("prompt"),
+        manual: data.manual || data.tags.includes("manual"),
         attention_snapshot: data.attentionSnapshot,
     };
 };
@@ -66,9 +66,9 @@ const handleStream = async (
                 allTokens: data.all_tokens,
                 allConfidences: data.all_confidences,
                 tags: data.tags,
-                stop: data.stop,
-                prompt: data.prompt,
-                manual: data.manual,
+                stop: data.stop || data.tags.includes("stop"),
+                prompt: data.prompt || data.tags.includes("prompt"),
+                manual: data.manual || data.tags.includes("manual"),
                 attentionSnapshot,
             });
         });
@@ -110,6 +110,7 @@ const generate = async ({
                 prompt: prompt,
                 max_tokens: maxTokens || 200,
                 attn_layer: attnLayer ?? null,
+                use_gen_batch: true,
             }),
             signal: abortSignal?.signal,
         });

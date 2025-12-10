@@ -4,6 +4,7 @@ from typing import Awaitable, Callable
 import asyncio
 
 
+from src.generator.gen_batch import BatchGenerator
 from src.model.wrapper import (
     ControlTokenTypes,
     LlamaModelWrapper,
@@ -30,28 +31,55 @@ class ModelState:
             force_greedy=True,
         )
 
+        self.batch_generator = BatchGenerator(
+            wrapper,
+            stop_tokens=[ControlTokenTypes.EOS],
+            topk=5,
+            force_greedy=True,
+        )
+
     async def generate(
         self,
         prompt: str,
         max_tokens: int,
+        use_gen_batch: bool = False,
         should_stop: Callable[[], Awaitable[bool]] | None = None,
     ):
         print("Waiting for model lock ...")
         with self.generate_lock:
             print("Starting generation ...")
-            self.generator.reset()
-            for token in self.generator.generate_yield(
-                prompt, max_tokens=max_tokens, log_metric=True
-            ):
-                if should_stop and await should_stop():
-                    print("Stopping generation ...")
-                    break
-                json_rep = token.to_json()
-                stringified_token = json.dumps(json_rep)
-                stringified_token.replace("\n", "\\n")
-                stringified_token += "\n"
-                yield stringified_token
-                await asyncio.sleep(0)
+            if use_gen_batch:
+                self.batch_generator.reset()
+                for batch in self.batch_generator.generate_yield(
+                    prompt, max_tokens=max_tokens, log_metric=True, record_attention=True
+                ):
+                    token, stop = batch[0]
+                    if stop:
+                        print("Reaching end...")
+                        break
+                    if should_stop and await should_stop():
+                        print("Stopping generation ...")
+                        break
+                    json_rep = token.to_dict()
+                    stringified_token = json.dumps(json_rep)
+                    stringified_token.replace("\n", "\\n")
+                    stringified_token += "\n"
+                    yield stringified_token
+                    await asyncio.sleep(0)
+            else:
+                self.generator.reset()
+                for token in self.generator.generate_yield(
+                    prompt, max_tokens=max_tokens, log_metric=True
+                ):
+                    if should_stop and await should_stop():
+                        print("Stopping generation ...")
+                        break
+                    json_rep = token.to_json()
+                    stringified_token = json.dumps(json_rep)
+                    stringified_token.replace("\n", "\\n")
+                    stringified_token += "\n"
+                    yield stringified_token
+                    await asyncio.sleep(0)
 
     async def continue_generate(
         self,

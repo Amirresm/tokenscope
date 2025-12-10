@@ -27,6 +27,7 @@ class ControlTokenTypes(Enum):
     FIM_SUFFIX = "fim_suffix_token"
     FIM_MIDDLE = "fim_middle_token"
 
+    PAD = "pad_token"
 
 class ModelWrapper:
     def __init__(
@@ -57,7 +58,7 @@ class ModelWrapper:
                 torch_dtype="auto",
                 device_map="auto",
                 quantization_config=bnb_config,
-                # attn_implementation="eager",
+                attn_implementation="eager",
             ).to(device)
             self.t: TokenizerType = AutoTokenizer.from_pretrained(
                 self.model_name

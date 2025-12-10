@@ -5,7 +5,7 @@ from src.generator.gen import Generator
 
 
 def custom():
-    model_name = "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
+    model_name = "/mnt/storage/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
     wrapper = LlamaModelWrapper(model_name)
     generator = Generator(wrapper, stop_tokens=[ControlTokenTypes.EOS])
 

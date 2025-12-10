@@ -17,6 +17,8 @@ async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
     max_tokens = request_data.get("max_tokens", 200)
     attn_layer = request_data.get("attn_layer", None)
+    use_gen_batch = request_data.get("use_gen_batch", False)
+
     model_state = typing.cast(ModelState, request.state.model_state)
     model_state.generator.set_attn_layer(attn_layer)
 
@@ -24,7 +26,7 @@ async def generate(request: fastapi.Request, request_data: dict):
 
     return StreamingResponse(
         model_state.generate(
-            prompt, max_tokens, should_stop=request.is_disconnected
+            prompt, max_tokens, use_gen_batch=use_gen_batch, should_stop=request.is_disconnected
         ),
         headers=headers,
         media_type="application/json",
@@ -119,7 +121,7 @@ def create_app():
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
             # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
-            "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-1.5B"
+            "/mnt/storage/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
         )
         model_state = ModelState(model_path)
 
