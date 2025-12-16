@@ -34,6 +34,9 @@ function visualizeWhitespace(str: string) {
 }
 
 export function Content({ token }: { token: GenerationToken }) {
+    const sessionId = generationStore.sessionId.value;
+    const branchId = generationStore.branchId.value;
+
     const [substituteToken, setSubstituteToken] = React.useState("");
     const [generationMode, setGenerationMode] =
         React.useState<GenerationMode>("continue");
@@ -91,9 +94,10 @@ export function Content({ token }: { token: GenerationToken }) {
             generationStore.generationAbort.value = new AbortController();
 
             await generationAPI.continueGeneration({
-                base: currentGeneration,
-                subIndex: token.index,
-                subTokens: tokens,
+                sessionId,
+                branchId,
+                branchPosition: token.index,
+                appendedPrompt: tokens,
                 maxTokens: generationStore.maxTokens.value,
 				attnLayer: generationStore.attnLayer.value,
                 abortSignal: generationStore.generationAbort.value,
@@ -102,7 +106,7 @@ export function Content({ token }: { token: GenerationToken }) {
 
             generationStore.isGenerating.value = false;
         },
-        [currentGeneration, token.index],
+        [currentGeneration, token.index, sessionId, branchId],
     );
 
     // React.useEffect(() => {
@@ -168,6 +172,9 @@ export function Content({ token }: { token: GenerationToken }) {
                     </div>
                 ))}
             </div>
+            <div className="mt-4">
+                {token.branchId}
+            </div>
             <div className="divider" />
             <div>
                 {token.prompt || token.manual ? (
@@ -177,8 +184,7 @@ export function Content({ token }: { token: GenerationToken }) {
                 ) : (
                     <AlternativeTokens
                         token={token}
-                        tokens={token.allTokens}
-                        confidences={token.allConfidences}
+                        alternativeTokens={token.alternativeTokens || []}
                         onClick={handleSubstituteToken}
                     />
                 )}

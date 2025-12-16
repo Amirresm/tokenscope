@@ -5,6 +5,9 @@ import generationAPI from "../api/generationAPI";
 import { PaintBucket } from "@phosphor-icons/react";
 
 export function PromptInput() {
+    const sessionId = generationStore.sessionId.value;
+    const branchId = generationStore.branchId.value;
+    const viewMode = generationStore.viewMode.value;
     const [value, setValue] = React.useState("");
 
     const isGenerating = generationStore.isGenerating.value;
@@ -35,10 +38,12 @@ export function PromptInput() {
         if (isPaused && lastTokenIndex !== undefined) {
             generationStore.generationAbort.value = new AbortController();
             await generationAPI.continueGeneration({
-                base: currentGeneration,
-                subIndex: lastTokenIndex,
+                sessionId,
+                branchId,
+                branchPosition: lastTokenIndex,
                 maxTokens: generationStore.maxTokens.value,
                 attnLayer: generationStore.attnLayer.value,
+                resumeOldBranch: true,
                 abortSignal: generationStore.generationAbort.value,
                 handleData: generationStore.appendToGeneration,
             });
@@ -55,7 +60,15 @@ export function PromptInput() {
         }
 
         generationStore.isGenerating.value = false;
-    }, [currentGeneration, isGenerating, isPaused, lastTokenIndex, value]);
+    }, [
+        currentGeneration,
+        isGenerating,
+        isPaused,
+        lastTokenIndex,
+        value,
+        branchId,
+        sessionId,
+    ]);
 
     const handleReset = React.useCallback(() => {
         // setValue("");
@@ -66,6 +79,11 @@ export function PromptInput() {
             generationStore.generationAbort.value.abort();
         }
     }, []);
+
+    const handleToggleViewMode = React.useCallback(() => {
+        generationStore.viewMode.value =
+            viewMode === "generation" ? "graph" : "generation";
+    }, [viewMode]);
 
     const colorVerbosityOptions = ["verbose", "normal", "none"] as const;
 
@@ -101,25 +119,35 @@ export function PromptInput() {
                 </div>
                 <button
                     className="btn btn-ghost"
+                    onClick={handleToggleViewMode}
+                >
+                    {viewMode === "generation"
+                        ? "Generation View"
+                        : "Graph View"}
+                </button>
+                <button
+                    className={`btn btn-ghost ${
+                        !generationStore.specialTokenFilter.value
+                            ? "btn-active"
+                            : ""
+                    }`}
                     onClick={() => {
                         generationStore.specialTokenFilter.value =
                             !generationStore.specialTokenFilter.value;
                     }}
                 >
-                    {generationStore.specialTokenFilter.value
-                        ? "Show Special"
-                        : "Hide Special"}
+                    Show Special
                 </button>
                 <button
-                    className="btn btn-ghost"
+                    className={`btn btn-ghost ${
+                        generationStore.showLineInfo.value ? "btn-active" : ""
+                    }`}
                     onClick={() => {
                         generationStore.showLineInfo.value =
                             !generationStore.showLineInfo.value;
                     }}
                 >
-                    {generationStore.showLineInfo.value
-                        ? "Hide Line Info"
-                        : "Show Line Info"}
+                    Show Line Info
                 </button>
                 <div className="grow" />
                 <label className="input w-40">

@@ -1,66 +1,60 @@
-from typing import Callable, Literal
-from dataclasses import dataclass
+from collections import defaultdict
 import typing
+import uuid
 
 import numpy as np
 import torch
 import time
 
-from src.generator.token_node import Token
-from src.model.wrapper import ControlTokenTypes, ModelWrapper
+from src.generator.token_node import TokenNode, TokenType
+from src.model.wrapper import (
+    ControlTokenTypes,
+    LlamaModelWrapper,
+    ModelWrapper,
+    QwenModelWrapper,
+)
 
-type TokenType = ControlTokenTypes | Literal["prompt"] | None
-type StreamCallback = Callable[[str, TokenType], bool | None]
-
-
-@dataclass
-class StepResult:
-    index: int
-    token: str
-    token_id: int
-    confidence: float
-    all_tokens: list[str]
-    all_tokens_ids: list[int]
-    all_confidences: list[float]
-    tags: list[str]
-    stop: bool = False
-
-    attention_snapshot: list[list[tuple[int, float]]] | None = None
-
-    def to_dict(self):
-        attention_snapshot = (
-            [
-                [[h[0], f"{h[1]:.3f}"] for h in head]
-                for head in self.attention_snapshot
-            ]
-            if self.attention_snapshot
-            else None
-        )
-
-        return {
-            "index": self.index,
-            "token": self.token,
-            "token_id": self.token_id,
-            "confidence": self.confidence,
-            "all_tokens_ids": self.all_tokens_ids,
-            "all_tokens": self.all_tokens,
-            "all_confidences": self.all_confidences,
-            "tags": self.tags,
-            "stop": self.stop,
-            "attention_snapshot": attention_snapshot,
-        }
-
-    @staticmethod
-    def from_dict(json_obj):
-        base = StepResult(**json_obj)
-        return base
-
-
-@dataclass
-class GeneratorItem:
-    token: Token
-    stop: bool
-    fresh: bool
+# @dataclass
+# class StepResult:
+#     index: int
+#     token: str
+#     token_id: int
+#     confidence: float
+#     all_tokens: list[str]
+#     all_tokens_ids: list[int]
+#     all_confidences: list[float]
+#     tags: list[str]
+#     stop: bool = False
+#
+#     attention_snapshot: list[list[tuple[int, float]]] | None = None
+#
+#     def to_dict(self):
+#         attention_snapshot = (
+#             [
+#                 [[h[0], f"{h[1]:.3f}"] for h in head]
+#                 for head in self.attention_snapshot
+#             ]
+#             if self.attention_snapshot
+#             else None
+#         )
+#
+#         return {
+#             "index": self.index,
+#             "token": self.token,
+#             "token_id": self.token_id,
+#             "confidence": self.confidence,
+#             "all_tokens_ids": self.all_tokens_ids,
+#             "all_tokens": self.all_tokens,
+#             "all_confidences": self.all_confidences,
+#             "tags": self.tags,
+#             "stop": self.stop,
+#             "attention_snapshot": attention_snapshot,
+#         }
+#
+#     @staticmethod
+#     def from_dict(json_obj):
+#         base = StepResult(**json_obj)
+#         return base
 
 
 class BatchGenerator:
@@ -84,7 +78,6 @@ class BatchGenerator:
         self.num_sample_history = []
         self.time_history = []
         self.memory_history = []
-        self.generation_results: list[Token] = []
 
     def reset(self):
         self.prompt = None
@@ -92,42 +85,31 @@ class BatchGenerator:
         self.num_sample_history = []
         self.time_history = []
         self.memory_history = []
-        self.generation_results = []
         self.model.reset()
 
     def generate_yield(
         self,
         prompts: str | list[str],
-        prompts_tokens: list[list[Token]] | None = None,
         max_tokens=None,
         record_attention: bool = False,
         log_metric=False,
-    ) -> typing.Generator[list[GeneratorItem], None, None]:
+    ) -> typing.Generator[list[tuple[TokenNode, bool]], None, None]:
+        sample_id = uuid.uuid4().hex
         old_padding_side = self.model.t.padding_side
         self.model.t.padding_side = "left"
         self.max_tokens = max_tokens or self.default_max_tokens
 
-        if prompts_tokens is not None:
-            batch_size = len(prompts_tokens)
-            stop_status = [False] * batch_size
+        if isinstance(prompts, str):
+            prompts = [prompts]
 
-            generation_results, input_ids, attention_mask = (
-                self._prepare_prompts_from_tokens(prompts_tokens)
-            )
-        else:
-            if isinstance(prompts, str):
-                prompts = [prompts]
-            batch_size = len(prompts)
-            stop_status = [False] * batch_size
+        batch_size = len(prompts)
+        stop_status = [False] * batch_size
 
-            generation_results, input_ids, attention_mask = (
-                self._prepare_prompts(prompts)
-            )
-
+        generation_results, input_ids, attention_mask = self._prepare_prompts(
+            prompts, sample_id=sample_id
+        )
         for i in range(input_ids.shape[1]):
-            step_result = [
-                GeneratorItem(p[i], False, False) for p in generation_results
-            ]
+            step_result = [(p[i], False) for p in generation_results]
             yield step_result
 
         remaining_token_count = self.max_tokens
@@ -155,10 +137,7 @@ class BatchGenerator:
                 stop_status = [
                     ss or st[1] for st, ss in zip(step_tokens, stop_status)
                 ]
-                yield [
-                    GeneratorItem(st[0], ss, True)
-                    for st, ss in zip(step_tokens, stop_status)
-                ]
+                yield [(st[0], ss) for st, ss in zip(step_tokens, stop_status)]
 
                 if all(stop_status):
                     print("All stop tokens reached, stopping generation.")
@@ -184,60 +163,46 @@ class BatchGenerator:
 
         self.model.t.padding_side = old_padding_side
 
-    def _prepare_prompts(self, prompts: list[str]):
+    def _prepare_prompts(self, prompts: list[str], sample_id: str):
         tokenized = self.model.t(
             prompts,
             padding="longest",
             max_length=512,
             return_tensors="pt",
         ).to(self.device)
-        input_ids: torch.Tensor = tokenized.input_ids
-        attention_mask: torch.Tensor = tokenized.attention_mask
+        input_ids = tokenized.input_ids
+        attention_mask = tokenized.attention_mask
 
-        generation_results: list[list[Token]] = [
-            [] for _ in range(input_ids.shape[0])
-        ]
+        generation_results = [[] for _ in range(input_ids.shape[0])]
+        root_token_node: TokenNode | None = None
 
         for j in range(input_ids.shape[1]):
             tokens = self.model.t.batch_decode(input_ids[:, j])
             for i in range(input_ids.shape[0]):
-                token_id = int(input_ids[i, j].item())
+                token_id = input_ids[i, j].item()
                 token = tokens[i]
 
                 control_type = self.model.get_control_token_type(token)
-                tags = ["prompt"]
+                token_types = [TokenType.PROMPT]
                 if control_type is not None:
-                    tags.append("special")
+                    token_types.append(TokenType.SPECIAL)
                     if control_type == ControlTokenTypes.EOS:
-                        tags.append(ControlTokenTypes.PAD.name.lower())
-                    else:
-                        tags.append(control_type.name.lower())
+                        token_types.append(TokenType.STOP)
+                    # else:
+                    #     token_types.append(control_type.name.lower())
 
-                prompt_step_result = Token(
+                token_node = TokenNode(
                     position=j,
                     token_string=token,
                     token_id=token_id,
                     confidence=1.0,
-                    alternative_tokens=[],
-                    token_types=tags,
+                    token_types=set(token_types),
+                    sample_id=sample_id,
                 )
-
-                generation_results[i].append(prompt_step_result)
+                if root_token_node is None:
+                    root_token_node = token_node
 
         return generation_results, input_ids, attention_mask
-
-    def _prepare_prompts_from_tokens(self, prompts: list[list[Token]]):
-        input_ids_list = [
-            [step.token_id for step in prompt] for prompt in prompts
-        ]
-        input_ids = torch.tensor(
-            input_ids_list, dtype=torch.int64, device=self.device
-        )
-        attention_mask = torch.ones(
-            input_ids.shape, dtype=torch.int64, device=self.device
-        )
-
-        return prompts, input_ids, attention_mask
 
     def _loop(
         self,
@@ -302,37 +267,20 @@ class BatchGenerator:
                 tags.append("special")
                 tags.append(token_control_type.name.lower())
 
-            # step_result = StepResult(
-            #     index=index,
-            #     token=decoded_token,
-            #     token_id=token_id,
-            #     confidence=confidence,
-            #     all_tokens_ids=all_token_ids,
-            #     all_tokens=[
-            #         self.model.ids_to_str(tok_id) for tok_id in all_token_ids
-            #     ],
-            #     all_confidences=all_confidences,
-            #     tags=tags,
-            #     attention_snapshot=(
-            #         attention_results[i] if attention_results else None
-            #     ),
-            # )
-            step_result = Token(
-                position=index,
-                token_string=decoded_token,
+            step_result = StepResult(
+                index=index,
+                token=decoded_token,
                 token_id=token_id,
                 confidence=confidence,
-                token_types=tags,
-                alternative_tokens=[
-                    Token(
-                        position=index,
-                        token_string=self.model.ids_to_str(tok_id),
-                        token_id=tok_id,
-                        confidence=conf,
-                        token_types=[],
-                    )
-                    for tok_id, conf in zip(all_token_ids, all_confidences)
+                all_tokens_ids=all_token_ids,
+                all_tokens=[
+                    self.model.ids_to_str(tok_id) for tok_id in all_token_ids
                 ],
+                all_confidences=all_confidences,
+                tags=tags,
+                attention_snapshot=(
+                    attention_results[i] if attention_results else None
+                ),
             )
             should_stop = self._check_stop_token(decoded_token)
             step_tokens.append((step_result, should_stop))
@@ -427,13 +375,6 @@ class BatchGenerator:
 
         return attention_snapshots
 
-    def generation_to_str(self, attach_prompt=True):
-        generation = self.prompt if self.prompt and attach_prompt else ""
-        for step_result in self.generation_results:
-            generation += f"{step_result.token_string}"
-
-        return generation
-
     def _log_metrics(self, elapsed, token_count):
         print(
             f"Generated {token_count} tokens in {elapsed:.3f} secs ({token_count/elapsed:.2f}tps)."
@@ -463,3 +404,52 @@ class BatchGenerator:
         std = np.std(self.memory_history) / 1024**2
 
         print(f"Average memory usage: {avg:.2f} MB ± {std:.2f} MB")
+
+
+if __name__ == "__main__":
+    from src.model.wrapper import ModelWrapper
+
+    model_path = (
+        # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
+        # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
+        # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
+        "/mnt/storage/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
+    )
+    Wrapper = (
+        LlamaModelWrapper
+        if "llama" in model_path.lower()
+        else QwenModelWrapper if "qwen" in model_path.lower() else None
+    )
+    assert Wrapper is not None, f"Unsupported model: {model_path}"
+    wrapper = Wrapper(model_path, q4bit=False)
+
+    generator = BatchGenerator(
+        wrapper,
+        stop_tokens=[ControlTokenTypes.EOS],
+        topk=5,
+        force_greedy=True,
+    )
+
+    prompts = [
+        "Once upon a time",
+        "In a galaxy far, far away",
+    ]
+
+    gen = generator.generate_yield(
+        prompts, max_tokens=20, record_attention=True
+    )
+
+    outputs = defaultdict(list)
+    for step in gen:
+        for i, (res, stopped) in enumerate(step):
+            print(
+                f"[Sample {i}] Generated token: {res.token} (ID: {res.token_id}, Confidence: {res.confidence:.4f}) | Stopped: {stopped}"
+            )
+            if "" not in res.tags:
+                outputs[i].append(res)
+
+        print("-" * 40)
+
+    for i in range(len(prompts)):
+        generation_str = "".join([res.token for res in outputs[i]])
+        print(f"Sample {i}: {generation_str}")

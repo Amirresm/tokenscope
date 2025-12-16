@@ -7,12 +7,59 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.providers.static_provider import StaticProvider
 from src.generator.gen import StepResult
-from src.server.model_state.model_state import ModelState
+from src.server.model_state.model_state2 import ModelState
 
 router = fastapi.APIRouter()
 
 
-@router.post("/generate")
+@router.get("/sessions")
+async def get_sessions(request: fastapi.Request):
+    model_state = typing.cast(ModelState, request.state.model_state)
+    sessions = model_state.get_sessions()
+    return {"sessions": list(sessions.keys())}
+
+
+@router.get("/session_branches")
+async def get_session_branches(request: fastapi.Request, session_id: str):
+    model_state = typing.cast(ModelState, request.state.model_state)
+    branches = model_state.get_session_branches(session_id)
+    return {"branches": list(branches)}
+
+
+@router.post("/prefill_generation")
+async def prefill_generation(request: fastapi.Request, request_data: dict):
+    session_id = request_data["session_id"]
+    branch_id = request_data["branch_id"]
+
+    model_state = typing.cast(ModelState, request.state.model_state)
+
+    headers = {"X-Content-Type-Options": "nosniff"}
+
+    return StreamingResponse(
+        model_state.prefill_generation(
+            session_id=session_id,
+            branch_id=branch_id,
+        ),
+        headers=headers,
+        media_type="application/json",
+    )
+
+
+@router.post("/get_generation_tree")
+async def get_generation_tree(request: fastapi.Request, request_data: dict):
+    session_id = request_data["session_id"]
+
+    model_state = typing.cast(ModelState, request.state.model_state)
+
+    if session_id not in model_state.sessions:
+        raise fastapi.HTTPException(status_code=404, detail="Session not found")
+
+    nodes, edges = model_state.sessions[session_id].generation_tree.to_tree()
+
+    return {"nodes": nodes, "edges": edges}
+
+
+@router.post("/generate_new")
 async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
     max_tokens = request_data.get("max_tokens", 200)
@@ -25,8 +72,10 @@ async def generate(request: fastapi.Request, request_data: dict):
     headers = {"X-Content-Type-Options": "nosniff"}
 
     return StreamingResponse(
-        model_state.generate(
-            prompt, max_tokens, use_gen_batch=use_gen_batch, should_stop=request.is_disconnected
+        model_state.generate_new(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            should_stop=request.is_disconnected,
         ),
         headers=headers,
         media_type="application/json",
@@ -35,13 +84,14 @@ async def generate(request: fastapi.Request, request_data: dict):
 
 @router.post("/continue")
 async def continue_generate(request: fastapi.Request, request_data: dict):
-    base = request_data.get("base", None)
-    index = request_data.get("index", None)
-    forced_token = request_data.get("forced_token", None)
+    session_id = request_data["session_id"]
+    branch_id = request_data["branch_id"]
+    branch_position = request_data["branch_position"]
+    appended_prompt = request_data.get("appended_prompt", "")
     max_tokens = request_data.get("max_tokens", 200)
+    resume_old_branch = request_data.get("resume_old_branch", False)
     attn_layer = request_data.get("attn_layer", None)
 
-    base = [StepResult.from_json(step) for step in base]
     model_state = typing.cast(ModelState, request.state.model_state)
     model_state.generator.set_attn_layer(attn_layer)
 
@@ -49,10 +99,12 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
 
     return StreamingResponse(
         model_state.continue_generate(
-            base,
-            index,
-            forced_token,
+            session_id=session_id,
+            branch_id=branch_id,
+            branch_position=branch_position,
+            appended_prompt=appended_prompt,
             max_tokens=max_tokens,
+            resume_old_branch=resume_old_branch,
             should_stop=request.is_disconnected,
         ),
         headers=headers,
@@ -122,6 +174,7 @@ def create_app():
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
             # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
             "/mnt/storage/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
+            # "/mnt/storage/ai/models/llm/Qwen/Qwen3-4B-base"
         )
         model_state = ModelState(model_path)
 

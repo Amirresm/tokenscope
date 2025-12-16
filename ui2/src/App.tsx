@@ -1,4 +1,4 @@
-import { ChartBar, Folder, List } from "@phosphor-icons/react";
+import { ChartBar, Folder, List, User } from "@phosphor-icons/react";
 import { LandingPage } from "./components/page/Landing";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import drawerStore from "./store/drawerStore";
@@ -7,6 +7,15 @@ import React from "react";
 function App() {
     const drawerOpen = drawerStore.drawerOpenSignal.value;
     const drawerState = drawerStore.drawerStateSignal.value;
+
+    const handleToggleSessionDrawer = React.useCallback(() => {
+        if (drawerOpen && drawerState.tab === "session") {
+            drawerStore.closeDrawer();
+        } else {
+            drawerStore.setDrawerTab("session");
+            drawerStore.openDrawer();
+        }
+    }, [drawerOpen, drawerState]);
 
     const handleToggleGenerationDrawer = React.useCallback(() => {
         if (drawerOpen && drawerState.tab === "generation") {
@@ -48,6 +57,12 @@ function App() {
                     <LandingPage />
                 </div>
                 <div className="flex flex-col items-center gap-2 my-4">
+                    <button
+                        className={`btn btn-ghost btn-sm btn-square ${drawerState.tab === "session" ? "btn-active" : ""}`}
+                        onClick={handleToggleSessionDrawer}
+                    >
+                        <User />
+                    </button>
                     <button
                         className={`btn btn-ghost btn-sm btn-square ${drawerState.tab === "generation" ? "btn-active" : ""}`}
                         onClick={handleToggleGenerationDrawer}

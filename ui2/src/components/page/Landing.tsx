@@ -1,19 +1,21 @@
+import { ReactFlowProvider } from "@xyflow/react";
+import generationStore from "../../store/generationStore";
 import GenerationView from "../generation-view/generation-view";
+import GraphPage from "../graph/GraphPage";
 import { PromptInput } from "../PromptInput";
 
 export function LandingPage() {
+    const viewMode = generationStore.viewMode.value;
     return (
-        <div className="flex flex-col h-full">
-            <PromptInput />
-            <GenerationView />
-        </div>
+        <ReactFlowProvider>
+            <div className="flex flex-col h-full">
+                <PromptInput />
+                {viewMode === "generation" ? (
+                    <GenerationView />
+                ) : viewMode === "graph" ? (
+                    <GraphPage />
+                ) : null}
+            </div>
+        </ReactFlowProvider>
     );
 }
-            //<label
-            //    htmlFor="my-drawer"
-            //    className="btn btn-primary drawer-button"
-            //    onClick={drawerStore.toggleDrawer}
-            //>
-            //    Open drawer
-            //</label>
-

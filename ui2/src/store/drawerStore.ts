@@ -1,6 +1,6 @@
 import { computed, signal } from "@preact/signals-react";
 
-type DrawerTab = "generation" | "stats" | "projects" | null;
+type DrawerTab = "session" | "generation" | "stats" | "projects" | null;
 
 type DrawerState = {
     open: boolean;

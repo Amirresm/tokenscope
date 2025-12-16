@@ -8,12 +8,14 @@ export type GenerationToken = {
     allTokensIds: number[];
     allTokens: string[];
     allConfidences: number[];
+    alternativeTokens?: GenerationToken[];
     tags: string[];
     stop?: boolean;
     prompt?: boolean;
     manual?: boolean;
     // attentionSnapshot?: number[][];
     attentionSnapshot?: { index: number; attention: number }[][];
+    branchId: string;
 
     // Local attributes
     lineNumber?: number;
@@ -68,6 +70,17 @@ function appendToGeneration(token: GenerationToken) {
 }
 
 function finalizeGeneration() {}
+
+const sessionId = signal<string | null>(null);
+const setSessionId = (id: string) => {
+    sessionId.value = id;
+}
+const branchId = signal<string | null>(null);
+const setBranchId = (id: string | null) => {
+    branchId.value = id;
+}
+
+const viewMode = signal<"generation" | "graph">("generation");
 
 const selectedToken = signal<GenerationToken>();
 const nextToken = computed(() => {
@@ -170,6 +183,13 @@ const setAttentionTargetToken = (token: GenerationToken) => {
 };
 
 export default {
+    sessionId,
+    setSessionId,
+    branchId,
+    setBranchId,
+
+    viewMode,
+
     currentGenerationSignal,
     clearGeneration,
     appendToGeneration,

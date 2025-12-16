@@ -3,11 +3,14 @@ import drawerStore from "../../store/drawerStore";
 import GenerationSidebar from "./generation-sidebar/generation-sidebar";
 import StatsSidebar from "./stats-sidebar/stats-sidebar";
 import ProjectSidebar from "./projects-sidebar/projects-sidebar";
+import SessionSidebar from "./session-sidebar/session-sidebar";
 
 export function Sidebar() {
     return (
         <div className="w-80 h-full flex flex-row p-4 pl-0">
             {(() => {
+                if (drawerStore.drawerStateSignal.value.tab === "session")
+                    return <SessionSidebar />;
                 if (drawerStore.drawerStateSignal.value.tab === "generation")
                     return <GenerationSidebar />;
                 if (drawerStore.drawerStateSignal.value.tab === "stats")

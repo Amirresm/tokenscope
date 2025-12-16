@@ -30,7 +30,10 @@ def main():
         # uvicorn.run(app, host="0.0.0.0", port=3000)
         uvicorn.run(app, host="0.0.0.0", port=3000, workers=1, loop="asyncio")
     else:
-        custom()
+        # custom()
+        test = "How to make a cake"
+
+        print(f"Test input: {test}")
 
 
 if __name__ == "__main__":

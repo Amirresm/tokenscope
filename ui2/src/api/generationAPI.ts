@@ -65,10 +65,12 @@ const handleStream = async (
                 allTokensIds: data.all_tokens_ids,
                 allTokens: data.all_tokens,
                 allConfidences: data.all_confidences,
+                alternativeTokens: data.alternative_tokens,
                 tags: data.tags,
                 stop: data.stop || data.tags.includes("stop"),
                 prompt: data.prompt || data.tags.includes("prompt"),
                 manual: data.manual || data.tags.includes("manual"),
+                branchId: data.branch_id,
                 attentionSnapshot,
             });
         });
@@ -101,7 +103,7 @@ const generate = async ({
     abortSignal?: AbortController;
 }) => {
     try {
-        const response = await fetch("http://10.0.0.92:3000/api/generate", {
+        const response = await fetch("http://10.0.0.92:3000/api/generate_new", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -128,39 +130,134 @@ const generate = async ({
     }
 };
 
+const prefillGeneration = async ({
+    sessionId,
+    branchId,
+    handleData,
+    onComplete,
+    abortSignal,
+}: {
+    sessionId: string;
+    branchId: string;
+    handleData: (data: GenerationToken) => void;
+    onComplete?: () => void;
+    abortSignal?: AbortController;
+}) => {
+    try {
+        const response = await fetch(
+            "http://10.0.0.92:3000/api/prefill_generation",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    branch_id: branchId,
+                }),
+                signal: abortSignal?.signal,
+            },
+        );
+        if (!response.ok) {
+            console.error("Error:", response.statusText);
+            return;
+        }
+        await handleStream(response, handleData, onComplete);
+    } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+            console.log("Generation aborted");
+            return;
+        }
+        console.error("Error:", error);
+    }
+};
+
+const getGenerationTree = async ({ sessionId }: { sessionId: string }) => {
+    try {
+        const response = await fetch(
+            "http://10.0.0.92:3000/api/get_generation_tree",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                }),
+            },
+        );
+        if (!response.ok) {
+            console.error("Error:", response.statusText);
+            return;
+        }
+        const data = await response.json();
+
+        return {
+            nodes: data.nodes.map((node: any) => ({
+                id: node.id,
+                type: "text",
+                position: { x: node.x * 300, y: node.y * 80 },
+                data: {
+                    label: node.text,
+                    text: node.text,
+                    parentText: node.parent_text,
+                    tokenCount: node.token_count + node.parent_token_count,
+                    confidence: node.total_confidence / node.token_count,
+                    totalConfidence:
+                        (node.total_confidence + node.parent_total_confidence) /
+                        (node.token_count + node.parent_token_count),
+                    branchId: node.branch_id,
+                    leaf: node.leaf,
+                    depth: node.y
+                },
+            })),
+            edges: data.edges.map((edge: any) => ({
+                id: `e${edge.from}-${edge.to}`,
+                source: edge.from,
+                target: edge.to,
+                type: "simplebezier",
+            })),
+        };
+    } catch (error) {
+        console.error("Error:", error);
+    }
+};
 const continueGeneration = async ({
-    base,
-    subIndex,
-    subTokens,
+    sessionId,
+    branchId,
+    branchPosition,
+    appendedPrompt,
     maxTokens,
+    resumeOldBranch,
     attnLayer,
     handleData,
     onComplete,
     abortSignal,
 }: {
-    base: GenerationToken[];
-    subIndex: number;
-    subTokens?: string;
+    sessionId: string;
+    branchId: string;
+    branchPosition: number;
+    appendedPrompt?: string;
     maxTokens?: number;
+    resumeOldBranch?: boolean;
     attnLayer?: number;
     handleData: (data: GenerationToken) => void;
     onComplete?: () => void;
     abortSignal?: AbortController;
 }) => {
     try {
-        const baseGeneration = base
-            .filter((token) => !token.tags.includes("special"))
-            .map(serializeGenerationToken);
         const response = await fetch("http://10.0.0.92:3000/api/continue", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                base: baseGeneration,
-                index: subIndex,
-                forced_token: subTokens,
+                session_id: sessionId,
+                branch_id: branchId,
+                branch_position: branchPosition,
+                appended_prompt: appendedPrompt || "",
                 max_tokens: maxTokens || 200,
+                resume_old_branch: resumeOldBranch || false,
                 attn_layer: attnLayer ?? null,
             }),
             signal: abortSignal?.signal,
@@ -244,6 +341,8 @@ const fim = async ({
 };
 
 export default {
+    prefillGeneration,
+    getGenerationTree,
     generate,
     continueGeneration,
     fim,

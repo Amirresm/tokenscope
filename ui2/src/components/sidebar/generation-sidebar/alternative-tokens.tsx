@@ -9,13 +9,11 @@ function visualizeWhitespace(str: string) {
 
 export default function AlternativeTokens({
     token,
-    tokens,
-    confidences,
+    alternativeTokens,
     onClick,
 }: {
     token: GenerationToken;
-    tokens: string[];
-    confidences: number[];
+    alternativeTokens: GenerationToken[];
     onClick: (tokens: string) => void;
 }) {
     return (
@@ -24,19 +22,20 @@ export default function AlternativeTokens({
                 Alternate Tokens
             </div>
             <div key={token.token} className="menu mt-4 w-full all-tokens-list">
-                {tokens.map((t, index) =>
-                    t === token.token ? null : (
-                        <li key={t}>
-                            <a
-                                className={`flex justify-between items-center p-1`}
-                                onClick={() => onClick(t)}
-                            >
-                                <div>{visualizeWhitespace(t)}</div>
-                                <div>{confidences[index].toFixed(2)}</div>
-                            </a>
-                        </li>
-                    ),
-                )}
+                {alternativeTokens.map((t) => (
+                    <li key={t.token}>
+                        <a
+                            className={`flex justify-between items-center p-1`}
+                            onClick={() => onClick(t.token)}
+                        >
+                            <div>{visualizeWhitespace(t.token)}</div>
+                            <div>{t.confidence.toFixed(2)}</div>
+                            {t.token === token.token && (
+                                <span> (current) </span>
+                            )}
+                        </a>
+                    </li>
+                ))}
             </div>
         </div>
     );
