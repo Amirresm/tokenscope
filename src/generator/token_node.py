@@ -158,6 +158,7 @@ class GenerationTree:
             parent_text: str = "",
             parent_token_count: int = 0,
             parent_total_confidence: float = 0.0,
+            depth: int = 0,
             y: int = 0,
             x: int = 0,
         ):

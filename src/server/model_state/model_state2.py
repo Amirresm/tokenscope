@@ -5,6 +5,7 @@ from typing import Awaitable, Callable
 import asyncio
 
 
+from src.ast_service.ast_service import ASTService
 from src.generator.gen_batch import BatchGenerator
 from src.generator.token_node import GenerationTree, TokenNode
 from src.model.wrapper import (
@@ -46,6 +47,8 @@ class ModelState:
             force_greedy=True,
         )
 
+        self.ast_service = ASTService()
+
         self.sessions: dict[str, Session] = {}
         self.session_counter = 0
         self.branch_counter = 0
@@ -80,6 +83,36 @@ class ModelState:
             stringified_token += "\n"
             yield stringified_token
             await asyncio.sleep(0)
+
+    def get_ast(
+        self,
+        session_id: str,
+        branch_id: str,
+    ):
+        session = self.sessions.get(session_id, None)
+        if session is None:
+            raise ValueError(f"Session {session_id} not found")
+
+        if branch_id not in session.generation_tree.branch_ids:
+            raise ValueError(
+                f"Branch {branch_id} not found in session {session_id}"
+            )
+
+        token_list = session.generation_tree.get_token_list(branch_id)
+        token_tuple_list = [
+            (t.token.token_string, t.token.token_id)
+            for t in token_list
+            if "special" not in t.token.token_types
+        ]
+
+        token_info_list, blocks = self.ast_service.map_ast_to_tokens(
+            token_tuple_list
+        )
+
+        return {
+            "tokens": token_info_list,
+            "blocks": blocks,
+        }
 
     async def generate_new(
         self,
@@ -155,7 +188,7 @@ class ModelState:
             new_branch_id = branch_id
             prompt = session.generation_tree.get_token_list(branch_id)
         else:
-            new_branch_id = f"branch_{self.branch_counter}" 
+            new_branch_id = f"branch_{self.branch_counter}"
             self.branch_counter += 1
             print(f"branch_position: {branch_position}")
             if appended_prompt:

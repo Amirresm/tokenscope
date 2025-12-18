@@ -59,6 +59,22 @@ async def get_generation_tree(request: fastapi.Request, request_data: dict):
     return {"nodes": nodes, "edges": edges}
 
 
+@router.get("/get_ast")
+async def get_ast(
+    request: fastapi.Request,
+    session_id: str,
+    branch_id: str,
+):
+    model_state = typing.cast(ModelState, request.state.model_state)
+
+    ast = model_state.get_ast(
+        session_id,
+        branch_id,
+    )
+
+    return ast
+
+
 @router.post("/generate_new")
 async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
@@ -173,8 +189,7 @@ def create_app():
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
             # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
-            "/mnt/storage/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
-            # "/mnt/storage/ai/models/llm/Qwen/Qwen3-4B-base"
+            "/storage/c/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
         )
         model_state = ModelState(model_path)
 
