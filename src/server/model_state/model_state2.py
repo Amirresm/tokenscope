@@ -105,13 +105,52 @@ class ModelState:
             if "special" not in t.token.token_types
         ]
 
-        token_info_list, blocks = self.ast_service.map_ast_to_tokens(
-            token_tuple_list
+        token_info_list, blocks, atomic_blocks = (
+            self.ast_service.map_ast_to_tokens(token_tuple_list)
         )
 
+        tokens_json = [
+            {
+                "token_string": t.text,
+                "token_id": t.token_id,
+                "match": t.prominent_match,
+                "block_id": t.block.id if t.block else None,
+                "block_type": t.block.type if t.block else None,
+                "block_depth": t.block.depth if t.block else None,
+                "start": t.start,
+                "end": t.end,
+                "line_number": t.line_number,
+            }
+            for t in token_info_list
+        ]
+
+        blocks_json = [
+            {
+                "id": b.id,
+                "parent_id": b.parent_id,
+                "type": b.type,
+                "total_range": b.total_range,
+                "unique_ranges": b.unique_ranges,
+                "depth": b.depth,
+                "source": b.source,
+                "unique_sources": b.unique_sources,
+            }
+            for b in blocks
+        ]
+
+        atomic_blocks_json = [
+            {
+                "type": ab.type,
+                "depth": ab.depth,
+                "range": ab.range,
+                "source": ab.source,
+            }
+            for ab in atomic_blocks
+        ]
         return {
-            "tokens": token_info_list,
-            "blocks": blocks,
+            "tokens": tokens_json,
+            "blocks": blocks_json,
+            "atomic_blocks": atomic_blocks_json,
         }
 
     async def generate_new(

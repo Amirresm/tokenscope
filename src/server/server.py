@@ -6,7 +6,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.providers.static_provider import StaticProvider
-from src.generator.gen import StepResult
 from src.server.model_state.model_state2 import ModelState
 
 router = fastapi.APIRouter()
@@ -80,7 +79,6 @@ async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
     max_tokens = request_data.get("max_tokens", 200)
     attn_layer = request_data.get("attn_layer", None)
-    use_gen_batch = request_data.get("use_gen_batch", False)
 
     model_state = typing.cast(ModelState, request.state.model_state)
     model_state.generator.set_attn_layer(attn_layer)
@@ -128,37 +126,37 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
     )
 
 
-@router.post("/fim")
-async def fim(request: fastapi.Request, request_data: dict):
-    base = request_data.get("base", None)
-    start_index = request_data.get("start_index", None)
-    end_index = request_data.get("end_index", None)
-    replace_tokens = request_data.get("replace_tokens", None)
-    max_tokens = request_data.get("max_tokens", 200)
-    attn_layer = request_data.get("attn_layer", None)
-    if start_index is None or end_index is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="start_index and end_index are required"
-        )
-
-    base = [StepResult.from_json(step) for step in base]
-    model_state = typing.cast(ModelState, request.state.model_state)
-    model_state.generator.set_attn_layer(attn_layer)
-
-    headers = {"X-Content-Type-Options": "nosniff"}
-
-    return StreamingResponse(
-        model_state.fim(
-            base,
-            start_index,
-            end_index,
-            replace_tokens,
-            max_tokens=max_tokens,
-            should_stop=request.is_disconnected,
-        ),
-        headers=headers,
-        media_type="text/event-stream",
-    )
+# @router.post("/fim")
+# async def fim(request: fastapi.Request, request_data: dict):
+#     base = request_data.get("base", None)
+#     start_index = request_data.get("start_index", None)
+#     end_index = request_data.get("end_index", None)
+#     replace_tokens = request_data.get("replace_tokens", None)
+#     max_tokens = request_data.get("max_tokens", 200)
+#     attn_layer = request_data.get("attn_layer", None)
+#     if start_index is None or end_index is None:
+#         raise fastapi.HTTPException(
+#             status_code=400, detail="start_index and end_index are required"
+#         )
+#
+#     base = [StepResult.from_json(step) for step in base]
+#     model_state = typing.cast(ModelState, request.state.model_state)
+#     model_state.generator.set_attn_layer(attn_layer)
+#
+#     headers = {"X-Content-Type-Options": "nosniff"}
+#
+#     return StreamingResponse(
+#         model_state.fim(
+#             base,
+#             start_index,
+#             end_index,
+#             replace_tokens,
+#             max_tokens=max_tokens,
+#             should_stop=request.is_disconnected,
+#         ),
+#         headers=headers,
+#         media_type="text/event-stream",
+#     )
 
 
 @router.get("/fetch_projects")
@@ -184,7 +182,7 @@ async def get_sample(request: fastapi.Request, project_name: str, task_id: str):
 
 def create_app():
     @asynccontextmanager
-    async def lifespan(app: fastapi.FastAPI):
+    async def lifespan(_: fastapi.FastAPI):
         model_path = (
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"

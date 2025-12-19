@@ -9,7 +9,7 @@ def custom():
     wrapper = LlamaModelWrapper(model_name)
     generator = Generator(wrapper, stop_tokens=[ControlTokenTypes.EOS])
 
-    generator.generate("How to make a cake", max_tokens=10, stream=True, log_metric=True)
+    generator.generate_yield("How to make a cake", max_tokens=10, stream=True, log_metric=True)
 
     print("\n\n\n")
 

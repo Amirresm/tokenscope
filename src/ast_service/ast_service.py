@@ -84,7 +84,7 @@ class ASTService:
 
         def worker(idx, code):
             try:
-                enriched, _ = self.map_ast_to_tokens(code)
+                enriched, _, _ = self.map_ast_to_tokens(code)
             except Exception as e:
                 print(f"Error processing code at index {idx}: {e}")
                 print(f"Code:\n{code}")
@@ -107,7 +107,9 @@ class ASTService:
         token_types = self.type_detector.detect_token_types(
             code, tree.root_node
         )
-        blocks = self.block_detector.detect_blocks(code, tree.root_node)
+        blocks, atomic_blocks = self.block_detector.detect_blocks(
+            code, tree.root_node
+        )
 
         tokens = tokenized_code
         results: list[TokenInfo] = []
@@ -151,7 +153,7 @@ class ASTService:
                 # line_counter += token.count("\n")
                 line_counter += 1
 
-        return results, blocks
+        return results, blocks, atomic_blocks
 
     def _find_type_matches(
         self, token_types, start_index, end_index, search_start_index=0
@@ -235,16 +237,17 @@ class ASTService:
         matching_info.sort(key=lambda x: x.priority, reverse=True)
         return matching_info, first_hit_index
 
-    def _find_block_matches(self, blocks, start_index, end_index):
+    def _find_block_matches(self, blocks: list[Block], start_index, end_index):
         block_matches = []
 
         for block in blocks:
-            if block.start <= start_index and block.end >= end_index:
-                block_matches.append(("full", block))
-            elif block.start >= start_index and block.start <= end_index:
-                block_matches.append(("start_inside", block))
-            elif block.end >= start_index and block.end <= end_index:
-                block_matches.append(("end_inside", block))
+            for ur in block.unique_ranges:
+                if ur.start <= start_index and ur.end >= end_index:
+                    block_matches.append(("full", block))
+                elif ur.start >= start_index and ur.start <= end_index:
+                    block_matches.append(("start_inside", block))
+                elif ur.end >= start_index and ur.end <= end_index:
+                    block_matches.append(("end_inside", block))
 
         if len(block_matches) == 0:
             return None
@@ -427,7 +430,7 @@ if __name__ == '__main__':
         for tid in ast_service.tokenizer.encode(code)
     ]
 
-    results, _ = ast_service.map_ast_to_tokens(tokenized_code)
+    results, _, _ = ast_service.map_ast_to_tokens(tokenized_code)
 
     # ast_service.report_tokens(results)
     ASTService.type_pretty_print(results)

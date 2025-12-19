@@ -290,7 +290,7 @@ class BatchGenerator:
             attention_results = self.record_attentions(output.attentions)
 
         step_tokens = []
-        for i, result in enumerate(results):
+        for result in results:
             token_id, confidence, all_token_ids, all_confidences = result
             decoded_token = self.model.ids_to_str(token_id)
             token_control_type = self.model.get_control_token_type(
