@@ -1,9 +1,12 @@
 import React from "react";
 import generationStore from "../../store/generationStore";
-import type { GenerationToken } from "../../store/generationStore";
-import drawerStore from "../../store/drawerStore";
 import "./generation-view.css";
-import { ArrowLineLeft, ArrowLineRight } from "@phosphor-icons/react";
+import { ArrowLineLeftIcon, ArrowLineRightIcon } from "@phosphor-icons/react";
+import type { GenerationToken } from "../../models/generationToken";
+import drawerStore, {
+    DrawerTabsEnum,
+} from "../../store/components/drawerStore";
+import tokenLevelViewStore from "../../store/components/tokenLevelViewStore";
 
 const defaultColorMap = {
     0: "text-base-content",
@@ -63,10 +66,10 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
     } = props;
 
     const {
-        index,
+        position,
         token,
         confidence,
-        tags,
+        tokenTypes,
         prompt,
         manual,
         lineConfidence,
@@ -78,7 +81,7 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
         (e: React.MouseEvent) => {
             e.stopPropagation();
             drawerStore.openDrawer();
-            drawerStore.setDrawerTab("generation");
+            drawerStore.setDrawerTab(DrawerTabsEnum.GENERATION);
             generationStore.selectedToken.value = generationToken;
         },
         [generationToken],
@@ -87,7 +90,7 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
     const textColor = React.useMemo(() => {
         if (prompt) return "text-gray-400";
         if (manual) {
-            if (tags.includes("prefix")) return "text-stone-400";
+            if (tokenTypes.includes("prefix")) return "text-stone-400";
             return "text-gray-400";
         }
 
@@ -107,14 +110,14 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
             "",
         );
         return textColor;
-    }, [prompt, manual, colorVerbosity, tags, confidence]);
+    }, [prompt, manual, colorVerbosity, tokenTypes, confidence]);
 
     const startOfLineMarkerColor = React.useMemo(() => {
         if (lineConfidence === undefined) return "";
 
         if (prompt) return "text-gray-400";
         if (manual) {
-            if (tags.includes("prefix")) return "text-stone-400";
+            if (tokenTypes.includes("prefix")) return "text-stone-400";
             return "text-gray-400";
         }
 
@@ -134,7 +137,7 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
             "",
         );
         return textColor;
-    }, [prompt, manual, colorVerbosity, tags, lineConfidence]);
+    }, [prompt, manual, colorVerbosity, tokenTypes, lineConfidence]);
 
     const relativeAttentionColor = React.useMemo(() => {
         if (relativeAttention === undefined) return "";
@@ -177,10 +180,10 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
                         className="token-arrow left-arrow"
                         onClick={(e) => {
                             e.stopPropagation();
-                            generationStore.updateFimIndices(index - 1);
+                            generationStore.updateFimIndices(position - 1);
                         }}
                     >
-                        <ArrowLineLeft />
+                        <ArrowLineLeftIcon />
                     </span>
                 )}
                 {showLineInfo && lineNumber !== undefined && (
@@ -206,10 +209,10 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
                         className="token-arrow right-arrow"
                         onClick={(e) => {
                             e.stopPropagation();
-                            generationStore.updateFimIndices(index);
+                            generationStore.updateFimIndices(position);
                         }}
                     >
-                        <ArrowLineRight />
+                        <ArrowLineRightIcon />
                     </span>
                 )}
             </span>
@@ -246,12 +249,12 @@ const GenerationList = React.memo((props: GenerationListProps) => {
 
     return generationList
         .filter((token) =>
-            specialTokenFilter ? !token.tags.includes("special") : true,
+            specialTokenFilter ? !token.tokenTypes.includes("special") : true,
         )
         .map((token) => (
             <GenerationToken
                 key={
-                    token.index +
+                    token.position +
                     "-" +
                     token.token +
                     "-" +
@@ -262,23 +265,23 @@ const GenerationList = React.memo((props: GenerationListProps) => {
                 generationToken={token}
                 colorVerbosity={colorVerbosity}
                 showLineInfo={showLineInfo}
-                isSelected={selectedTokenIndex === token.index}
+                isSelected={selectedTokenIndex === token.position}
                 isFimSelected={
                     !!(
                         fimStartTokenIndex &&
-                        token.index > fimStartTokenIndex &&
+                        token.position > fimStartTokenIndex &&
                         fimEndTokenIndex &&
-                        token.index <= fimEndTokenIndex
+                        token.position <= fimEndTokenIndex
                     )
                 }
                 isOnlyFimSelected={
                     !!(
                         fimStartTokenIndex &&
                         fimEndTokenIndex === null &&
-                        token.index === fimStartTokenIndex
+                        token.position === fimStartTokenIndex
                     )
                 }
-                isAttentionTarget={token.index === attentionTargetTokenIndex}
+                isAttentionTarget={token.position === attentionTargetTokenIndex}
                 attentionVisibleRange={attentionVisibleRange}
             />
         ));
@@ -287,9 +290,11 @@ const GenerationList = React.memo((props: GenerationListProps) => {
 const GenerationView = () => {
     const bottomRef = React.useRef<HTMLSpanElement>(null);
 
-    const generationList = generationStore.currentGenerationSignal.value;
-    const colorVerbosity = generationStore.colorVerbosity.value;
-    const showLineInfo = generationStore.showLineInfo.value;
+    const colorVerbosity = tokenLevelViewStore.colorVerbosity.value;
+    const showLineInfo = tokenLevelViewStore.showLineInfo.value;
+    const specialTokenFilter = tokenLevelViewStore.specialTokenFilter.value;
+
+    const generationList = generationStore.currentGeneration.value;
     const selectedToken = generationStore.selectedToken.value;
     const isGenerating = generationStore.isGenerating.value;
 
@@ -299,8 +304,6 @@ const GenerationView = () => {
     const attentionTargetToken = generationStore.attentionTargetToken.value;
     const attentionTargetHead = generationStore.attentionTargetHead.value;
     const attentionVisibleRange = generationStore.attentionVisibleRange.value;
-
-    const specialTokenFilter = generationStore.specialTokenFilter.value;
 
     React.useEffect(() => {
         if (isGenerating) bottomRef.current?.scrollIntoView({});
@@ -316,10 +319,10 @@ const GenerationView = () => {
                     generationList={generationList}
                     colorVerbosity={colorVerbosity}
                     showLineInfo={showLineInfo}
-                    selectedTokenIndex={selectedToken?.index}
+                    selectedTokenIndex={selectedToken?.position}
                     fimStartTokenIndex={fimStartToken}
                     fimEndTokenIndex={fimEndToken}
-                    attentionTargetTokenIndex={attentionTargetToken?.index}
+                    attentionTargetTokenIndex={attentionTargetToken?.position}
                     attentionTargetHead={attentionTargetHead}
                     attentionVisibleRange={attentionVisibleRange}
                     specialTokenFilter={specialTokenFilter}

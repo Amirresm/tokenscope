@@ -1,12 +1,12 @@
 import React from "react";
-import generationStore, {
-    GenerationToken,
-} from "../../../store/generationStore";
 import "./generation-sidebar.css";
-import generationAPI from "../../../api/generationAPI";
-import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
+import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import AlternativeTokens from "./alternative-tokens";
 import FimPanel from "./fim-panel";
+import { GenerationToken } from "../../../models/generationToken";
+import sessionStore from "../../../store/sessionStore";
+import generationStore from "../../../store/generationStore";
+import { continueGeneration } from "../../../api/generationAPI";
 
 type GenerationMode = "continue" | "fim";
 
@@ -34,14 +34,14 @@ function visualizeWhitespace(str: string) {
 }
 
 export function Content({ token }: { token: GenerationToken }) {
-    const sessionId = generationStore.sessionId.value;
-    const branchId = generationStore.branchId.value;
+    const sessionId = sessionStore.sessionId.value;
+    const branchId = sessionStore.branchId.value;
 
     const [substituteToken, setSubstituteToken] = React.useState("");
     const [generationMode, setGenerationMode] =
         React.useState<GenerationMode>("continue");
 
-    const currentGeneration = generationStore.currentGenerationSignal.value;
+    const currentGeneration = generationStore.currentGeneration.value;
     const nextToken = generationStore.nextToken.value;
     const prevToken = generationStore.previousToken.value;
 
@@ -93,20 +93,22 @@ export function Content({ token }: { token: GenerationToken }) {
 
             generationStore.generationAbort.value = new AbortController();
 
-            await generationAPI.continueGeneration({
+            await continueGeneration(
                 sessionId,
                 branchId,
-                branchPosition: token.index,
-                appendedPrompt: tokens,
-                maxTokens: generationStore.maxTokens.value,
-				attnLayer: generationStore.attnLayer.value,
-                abortSignal: generationStore.generationAbort.value,
-                handleData: generationStore.appendToGeneration,
-            });
+                token.position,
+                tokens,
+                generationStore.maxTokens.value,
+                false,
+                generationStore.attnLayer.value,
+                generationStore.appendToGeneration,
+                undefined,
+                generationStore.generationAbort.value,
+            );
 
             generationStore.isGenerating.value = false;
         },
-        [currentGeneration, token.index, sessionId, branchId],
+        [currentGeneration, token.position, sessionId, branchId],
     );
 
     // React.useEffect(() => {
@@ -137,17 +139,17 @@ export function Content({ token }: { token: GenerationToken }) {
                     onClick={handlePrevToken}
                     disabled={!prevToken}
                 >
-                    <ArrowLeft />
+                    <ArrowLeftIcon />
                 </button>
                 <div>
-                    {token.index + 1} / {currentGeneration.length}
+                    {token.position + 1} / {currentGeneration.length}
                 </div>
                 <button
                     className="btn"
                     onClick={handleNextToken}
                     disabled={!nextToken}
                 >
-                    <ArrowRight />
+                    <ArrowRightIcon />
                 </button>
             </div>
             <div className="flex items-center gap-3 mt-4">
@@ -166,15 +168,13 @@ export function Content({ token }: { token: GenerationToken }) {
                 </div>
             </div>
             <div className="flex flex-col gap-2 mt-4">
-                {token.tags.map((tag) => (
-                    <div key={tag} className="badge badge-outline badge-sm">
-                        {tag}
+                {token.tokenTypes.map((type) => (
+                    <div key={type} className="badge badge-outline badge-sm">
+                        {type}
                     </div>
                 ))}
             </div>
-            <div className="mt-4">
-                {token.branchId}
-            </div>
+            <div className="mt-4">{token.branchId}</div>
             <div className="divider" />
             <div>
                 {token.prompt || token.manual ? (
@@ -237,7 +237,9 @@ export function Content({ token }: { token: GenerationToken }) {
                             role="button"
                             className="btn btn-ghost btn-sm"
                         >
-                            <span className={`${attentionTargetHeadCount === 0 ? "text-gray-500" : ""}`}>
+                            <span
+                                className={`${attentionTargetHeadCount === 0 ? "text-gray-500" : ""}`}
+                            >
                                 Head {attentionTargetHead}
                             </span>
                         </div>
@@ -262,9 +264,9 @@ export function Content({ token }: { token: GenerationToken }) {
                     <button
                         className="btn btn-ghost grow"
                         onClick={handleSetAttentionTargetToken}
-						disabled={attentionTargetHeadCount === 0}
+                        disabled={attentionTargetHeadCount === 0}
                     >
-                        {token.index === attentionTargetToken?.index
+                        {token.position === attentionTargetToken?.position
                             ? "Remove Attention Target"
                             : "Set Attention Target"}
                     </button>
@@ -276,7 +278,7 @@ export function Content({ token }: { token: GenerationToken }) {
 
 export default function GenerationSidebar() {
     const token = generationStore.selectedToken.value;
-    const currentGeneration = generationStore.currentGenerationSignal.value;
+    const currentGeneration = generationStore.currentGeneration.value;
     if (!token || currentGeneration.length === 0)
         return (
             <div className="h-full flex items-center justify-center grow">

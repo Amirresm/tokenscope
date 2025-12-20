@@ -6,21 +6,30 @@ import {
     Background,
     Controls,
     Edge,
+    EdgeChange,
     Handle,
     MiniMap,
     Node,
+    NodeChange,
     NodeProps,
+    NodeTypes,
     Position,
     ReactFlow,
     useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import generationStore from "../../store/generationStore";
-import generationAPI from "../../api/generationAPI";
 import React from "react";
 import dagre from "@dagrejs/dagre";
+import { fetchGenerationTree } from "../../api/generationMetaAPI";
+import sessionStore from "../../store/sessionStore";
+import { GenerationTreeNodeData } from "../../models/generationTree";
+import { prefillGeneration } from "../../api/generationAPI";
+import globalStore from "../../store/components/globalStore";
 
-export function TextNode(props: NodeProps) {
+type GenerationTreeNode = Node<GenerationTreeNodeData>;
+
+export function TextNode(props: NodeProps<GenerationTreeNode>) {
     return (
         <div
             className={`p-2 border rounded bg-base-200 min-w-[150px] ${props.data.leaf ? "border-green-300" : "border-gray-300"}`}
@@ -53,7 +62,7 @@ export function TextNode(props: NodeProps) {
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const getLayoutedElements = (
-    nodes: Node[],
+    nodes: GenerationTreeNode[],
     edges: Edge[],
     direction = "TB",
     align = "UL",
@@ -70,16 +79,6 @@ const getLayoutedElements = (
         const lineHeight = 26;
         const baseNodeHeight = 100;
         const nodeHeight = baseNodeHeight + totalParentLines * lineHeight;
-        // const nodeHeight = 300
-        console.log(
-            node.data.branchId,
-            "depth:",
-            node.data.depth,
-            "numLines:",
-            totalParentLines,
-            "calculatedHeight:",
-            nodeHeight,
-        );
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
     });
 
@@ -89,17 +88,14 @@ const getLayoutedElements = (
 
     dagre.layout(dagreGraph);
 
-    const newNodes = nodes.map((node) => {
+    const newNodes: GenerationTreeNode[] = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-        // console.log("node", node);
-        // console.log("nodeWithPosition", nodeWithPosition);
         const newNode = {
             ...node,
-            targetPosition: isHorizontal ? "left" : "top",
-            sourcePosition: isHorizontal ? "right" : "bottom",
+            targetPosition: isHorizontal ? Position.Left : Position.Top,
+            sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
                 // x: nodeWithPosition.x - nodeWithPosition.width / 2,
-                // x: nodeWithPosition.x,
                 x: node.position.x * 1.1,
                 // y: nodeWithPosition.y - nodeWithPosition.height / 2,
                 y: nodeWithPosition.y,
@@ -112,11 +108,12 @@ const getLayoutedElements = (
     return { nodes: newNodes, edges };
 };
 
-const nodeTypes = { text: TextNode };
+const nodeTypes = { text: TextNode } as NodeTypes;
 
 function GraphPage() {
-    const sessionId = generationStore.sessionId.value;
-    const branchId = generationStore.branchId.value;
+    const sessionId = sessionStore.sessionId.value;
+    const branchId = sessionStore.branchId.value;
+
     const isGenerating = generationStore.isGenerating.value;
 
     const { fitView } = useReactFlow();
@@ -125,12 +122,12 @@ function GraphPage() {
         queryKey: ["treeData", sessionId],
         queryFn: async () => {
             if (!sessionId) return null;
-            const data = await generationAPI.getGenerationTree({ sessionId });
+            const data = await fetchGenerationTree(sessionId);
             return data;
         },
     });
-    const [nodes, setNodes] = React.useState([]);
-    const [edges, setEdges] = React.useState([]);
+    const [nodes, setNodes] = React.useState<GenerationTreeNode[]>([]);
+    const [edges, setEdges] = React.useState<Edge[]>([]);
     const [focusId, setFocusId] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -155,7 +152,7 @@ function GraphPage() {
     }, [treeDataQuery.data]);
 
     const onNodesChange = React.useCallback(
-        (changes) => {
+        (changes: NodeChange<GenerationTreeNode>[]) => {
             setNodes((nodesSnapshot) =>
                 applyNodeChanges(changes, nodesSnapshot),
             );
@@ -183,21 +180,22 @@ function GraphPage() {
         [focusId, fitView],
     );
     const onEdgesChange = React.useCallback(
-        (changes) =>
+        (changes: EdgeChange[]) =>
             setEdges((edgesSnapshot) =>
                 applyEdgeChanges(changes, edgesSnapshot),
             ),
         [],
     );
     const onConnect = React.useCallback(
-        (params) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
+        (params: any) =>
+            setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
         [],
     );
 
     const handleNodeClick = React.useCallback(
-        async (event, node) => {
+        async (_: any, node: GenerationTreeNode) => {
             const branchId = node.data.branchId;
-            generationStore.setBranchId(branchId);
+            sessionStore.setBranchId(branchId);
             // If generation is already in progress, pause
             if (isGenerating) {
                 generationStore.generationAbort.value?.abort();
@@ -212,15 +210,16 @@ function GraphPage() {
 
             generationStore.selectedToken.value = undefined;
             generationStore.generationAbort.value = new AbortController();
-            await generationAPI.prefillGeneration({
-                sessionId: sessionId || "",
-                branchId: branchId,
-                abortSignal: generationStore.generationAbort.value,
-                handleData: generationStore.appendToGeneration,
-            });
+            await prefillGeneration(
+                sessionId || "",
+                branchId,
+                generationStore.appendToGeneration,
+                undefined,
+                generationStore.generationAbort.value,
+            );
 
             generationStore.isGenerating.value = false;
-            generationStore.viewMode.value = "generation";
+            globalStore.viewMode.value = "generation";
         },
         [sessionId, isGenerating],
     );

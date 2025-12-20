@@ -1,11 +1,11 @@
 import React from "react";
 import generationStore from "../../../store/generationStore";
-import generationAPI from "../../../api/generationAPI";
 
 export default function FimPanel() {
+    return "TODO: FIM Panel";
     const [replaceToken, setReplaceToken] = React.useState<string>("");
 
-    const currentGeneration = generationStore.currentGenerationSignal.value;
+    const currentGeneration = generationStore.currentGeneration.value;
     const fimStartToken = generationStore.fimStartToken.value;
     const fimEndToken = generationStore.fimEndToken.value;
 
@@ -20,7 +20,7 @@ export default function FimPanel() {
 
         generationStore.clearGeneration();
         generationStore.clearFimState();
-		generationStore.selectedToken.value = undefined;
+        generationStore.selectedToken.value = undefined;
 
         if (!fimStartToken) {
             console.error("Fill In The Middle: Start or End token is missing");
@@ -32,13 +32,13 @@ export default function FimPanel() {
 
         generationStore.generationAbort.value = new AbortController();
 
-        await generationAPI.fim({
+        await fim({
             base: currentGeneration,
             startIndex: fimStartToken,
             endIndex: fimEndToken || fimStartToken,
             replaceTokens: replaceToken,
             maxTokens: generationStore.maxTokens.value,
-			attnLayer: generationStore.attnLayer.value,
+            attnLayer: generationStore.attnLayer.value,
             abortSignal: generationStore.generationAbort.value,
             handleData: generationStore.appendToGeneration,
         });

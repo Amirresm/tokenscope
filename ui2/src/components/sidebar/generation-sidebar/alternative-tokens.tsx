@@ -1,4 +1,4 @@
-import { GenerationToken } from "../../../store/generationStore";
+import { GenerationToken } from "../../../models/generationToken";
 
 function visualizeWhitespace(str: string) {
     return str

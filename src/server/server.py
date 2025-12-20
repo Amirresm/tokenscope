@@ -163,21 +163,21 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
 async def fetch_projects(request: fastapi.Request):
     static_provider = typing.cast(StaticProvider, request.state.static_provider)
     projects = static_provider.get_project_names()
-    return {"projects": projects}
+    return projects
 
 
 @router.get("/get_project")
 async def get_project(request: fastapi.Request, project_name: str):
     static_provider = typing.cast(StaticProvider, request.state.static_provider)
     project = static_provider.get_project_info(project_name)
-    return {"project": project}
+    return project
 
 
 @router.get("/get_sample")
 async def get_sample(request: fastapi.Request, project_name: str, task_id: str):
     static_provider = typing.cast(StaticProvider, request.state.static_provider)
     sample = static_provider.get_sample(project_name, task_id)
-    return {"sample": sample}
+    return sample
 
 
 def create_app():

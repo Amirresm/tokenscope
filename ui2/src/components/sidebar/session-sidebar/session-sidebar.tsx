@@ -1,60 +1,61 @@
 import React from "react";
-import projectsStore from "../../../store/projectsStore";
 import generationStore from "../../../store/generationStore";
 import { useQuery } from "@tanstack/react-query";
-import sessionAPI from "../../../api/sessionAPI";
-import generationAPI from "../../../api/generationAPI";
+import sessionStore from "../../../store/sessionStore";
+import { prefillGeneration } from "../../../api/generationAPI";
+import { fetchSessions, fetchSessionBranches } from "../../../api/sessionAPI";
 
 const SessionSidebar = () => {
-    const sessionId = generationStore.sessionId.value;
-    const selectedSession = generationStore.sessionId.value;
-    const selectedBranch = generationStore.branchId.value;
+    const sessionId = sessionStore.sessionId.value;
+    const selectedBranch = sessionStore.branchId.value;
 
     const isGenerating = generationStore.isGenerating.value;
 
     const handleSessionChange = React.useCallback((sessionId: string) => {
-        generationStore.setSessionId(sessionId);
-        generationStore.setBranchId(null);
+        sessionStore.setSessionId(sessionId);
+        sessionStore.setBranchId(null);
     }, []);
 
-    const handleBranchChange = React.useCallback(async (branchId: string) => {
-        generationStore.setBranchId(branchId);
-        // If generation is already in progress, pause
-        if (isGenerating) {
-            generationStore.generationAbort.value?.abort();
+    const handleBranchChange = React.useCallback(
+        async (branchId: string) => {
+            sessionStore.setBranchId(branchId);
+            // If generation is already in progress, pause
+            if (isGenerating) {
+                generationStore.generationAbort.value?.abort();
+                generationStore.isGenerating.value = false;
+                generationStore.paused.value = true;
+                return;
+            }
+
+            generationStore.clearGeneration();
+            generationStore.isGenerating.value = true;
+            generationStore.paused.value = false;
+
+            generationStore.selectedToken.value = undefined;
+            generationStore.generationAbort.value = new AbortController();
+            await prefillGeneration(
+                sessionId || "",
+                branchId,
+                generationStore.appendToGeneration,
+                undefined,
+                generationStore.generationAbort.value,
+            );
+
             generationStore.isGenerating.value = false;
-            generationStore.paused.value = true;
-            return;
-        }
-
-        generationStore.clearGeneration();
-        generationStore.isGenerating.value = true;
-        generationStore.paused.value = false;
-
-        generationStore.selectedToken.value = undefined;
-        generationStore.generationAbort.value = new AbortController();
-        await generationAPI.prefillGeneration({
-            sessionId: sessionId || "",
-            branchId: branchId,
-            abortSignal: generationStore.generationAbort.value,
-            handleData: generationStore.appendToGeneration,
-        });
-
-        generationStore.isGenerating.value = false;
-    }, [sessionId, isGenerating]);
+        },
+        [sessionId, isGenerating],
+    );
 
     const sessionQuery = useQuery({
         queryKey: ["sessions"],
-        queryFn: () => sessionAPI.getSessions(),
+        queryFn: () => fetchSessions(),
     });
 
     const branchQuery = useQuery({
-        queryKey: ["branches", selectedSession],
+        queryKey: ["branches", sessionId],
         queryFn: () =>
-            selectedSession
-                ? sessionAPI.getSessionBranches(selectedSession)
-                : Promise.resolve([]),
-        enabled: !!selectedSession,
+            sessionId ? fetchSessionBranches(sessionId) : Promise.resolve([]),
+        enabled: !!sessionId,
     });
 
     return (
@@ -63,7 +64,7 @@ const SessionSidebar = () => {
                 <label className="block mb-1 font-medium">Session</label>
                 <select
                     className="w-full p-2 select"
-                    value={selectedSession || ""}
+                    value={sessionId || ""}
                     onChange={(e) => handleSessionChange(e.target.value)}
                 >
                     <option value="" disabled>
@@ -76,7 +77,7 @@ const SessionSidebar = () => {
                     ))}
                 </select>
             </div>
-            {selectedSession && (
+            {sessionId && (
                 <div className="p-2 border-b">
                     <label className="block mb-1 font-medium">Branch</label>
                     <select

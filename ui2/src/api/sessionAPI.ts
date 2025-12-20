@@ -1,6 +1,8 @@
-const getSessions = async () => {
+import { API_BASE_URL } from "./constants";
+
+export async function fetchSessions() {
     try {
-        const response = await fetch("http://10.0.0.92:3000/api/sessions");
+        const response = await fetch(`${API_BASE_URL}/sessions`);
         if (!response.ok) {
             console.error("Error:", response.statusText);
             return;
@@ -11,12 +13,12 @@ const getSessions = async () => {
     } catch (error) {
         console.error("Error:", error);
     }
-};
+}
 
-const getSessionBranches = async (session: string) => {
+export async function fetchSessionBranches(session: string) {
     try {
         const response = await fetch(
-            `http://10.0.0.92:3000/api/session_branches?session_id=${session}`,
+            `${API_BASE_URL}/session_branches?session_id=${session}`,
         );
         if (!response.ok) {
             console.error("Error:", response.statusText);
@@ -28,9 +30,4 @@ const getSessionBranches = async (session: string) => {
     } catch (error) {
         console.error("Error:", error);
     }
-};
-
-export default {
-    getSessions,
-    getSessionBranches,
-};
+}

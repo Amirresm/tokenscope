@@ -1,9 +1,8 @@
-import { List } from "@phosphor-icons/react";
-import drawerStore from "../../store/drawerStore";
 import GenerationSidebar from "./generation-sidebar/generation-sidebar";
 import StatsSidebar from "./stats-sidebar/stats-sidebar";
 import ProjectSidebar from "./projects-sidebar/projects-sidebar";
 import SessionSidebar from "./session-sidebar/session-sidebar";
+import drawerStore from "../../store/components/drawerStore";
 
 export function Sidebar() {
     return (

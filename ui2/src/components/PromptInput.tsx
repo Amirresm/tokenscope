@@ -1,22 +1,28 @@
 import React from "react";
 import DynamicTextarea from "./DynamicTextarea";
 import generationStore from "../store/generationStore";
-import generationAPI from "../api/generationAPI";
-import { PaintBucket } from "@phosphor-icons/react";
+import { PaintBucketIcon } from "@phosphor-icons/react";
+import sessionStore from "../store/sessionStore";
+import globalStore from "../store/components/globalStore";
+import { continueGeneration, generateNew } from "../api/generationAPI";
+import tokenLevelViewStore, {
+    ColorVerbosityEnum,
+} from "../store/components/tokenLevelViewStore";
 
 export function PromptInput() {
-    const sessionId = generationStore.sessionId.value;
-    const branchId = generationStore.branchId.value;
-    const viewMode = generationStore.viewMode.value;
+    const sessionId = sessionStore.sessionId.value;
+    const branchId = sessionStore.branchId.value;
+
+    const viewMode = globalStore.viewMode.value;
+
     const [value, setValue] = React.useState("");
 
     const isGenerating = generationStore.isGenerating.value;
     const isPaused = generationStore.paused.value;
 
-    const lastTokenIndex =
-        generationStore.lastGeneratedTokenSignal.value?.index;
+    const lastTokenIndex = generationStore.lastGeneratedToken.value?.position;
     const hasGeneration = generationStore.hasGeneration.value;
-    const currentGeneration = generationStore.currentGenerationSignal.value;
+    const currentGeneration = generationStore.currentGeneration.value;
 
     const handleChange = React.useCallback((v: string) => {
         setValue(v);
@@ -37,26 +43,29 @@ export function PromptInput() {
 
         if (isPaused && lastTokenIndex !== undefined) {
             generationStore.generationAbort.value = new AbortController();
-            await generationAPI.continueGeneration({
+            await continueGeneration(
                 sessionId,
                 branchId,
-                branchPosition: lastTokenIndex,
-                maxTokens: generationStore.maxTokens.value,
-                attnLayer: generationStore.attnLayer.value,
-                resumeOldBranch: true,
-                abortSignal: generationStore.generationAbort.value,
-                handleData: generationStore.appendToGeneration,
-            });
+                lastTokenIndex,
+                undefined,
+                generationStore.maxTokens.value,
+                true,
+                generationStore.attnLayer.value,
+                generationStore.appendToGeneration,
+                undefined,
+                generationStore.generationAbort.value,
+            );
         } else {
             generationStore.selectedToken.value = undefined;
             generationStore.generationAbort.value = new AbortController();
-            await generationAPI.generate({
-                prompt: value,
-                maxTokens: generationStore.maxTokens.value,
-                attnLayer: generationStore.attnLayer.value,
-                abortSignal: generationStore.generationAbort.value,
-                handleData: generationStore.appendToGeneration,
-            });
+            await generateNew(
+                value,
+                generationStore.maxTokens.value,
+                generationStore.attnLayer.value,
+                generationStore.appendToGeneration,
+                undefined,
+                generationStore.generationAbort.value,
+            );
         }
 
         generationStore.isGenerating.value = false;
@@ -81,11 +90,11 @@ export function PromptInput() {
     }, []);
 
     const handleToggleViewMode = React.useCallback(() => {
-        generationStore.viewMode.value =
+        globalStore.viewMode.value =
             viewMode === "generation" ? "graph" : "generation";
     }, [viewMode]);
 
-    const colorVerbosityOptions = ["verbose", "normal", "none"] as const;
+    const colorVerbosityOptions = Object.values(ColorVerbosityEnum);
 
     return (
         <div className="sticky z-10 top-0 px-4 pt-4 bg-base-100/50 backdrop-blur-lg">
@@ -98,7 +107,7 @@ export function PromptInput() {
             <div className="flex gap-2 mt-4 items-center">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn m-1">
-                        <PaintBucket />
+                        <PaintBucketIcon />
                     </div>
                     <ul
                         tabIndex={0}
@@ -108,7 +117,7 @@ export function PromptInput() {
                             <li
                                 key={option}
                                 onClick={() =>
-                                    (generationStore.colorVerbosity.value =
+                                    (tokenLevelViewStore.colorVerbosity.value =
                                         option)
                                 }
                             >
@@ -127,24 +136,26 @@ export function PromptInput() {
                 </button>
                 <button
                     className={`btn btn-ghost ${
-                        !generationStore.specialTokenFilter.value
+                        !tokenLevelViewStore.specialTokenFilter.value
                             ? "btn-active"
                             : ""
                     }`}
                     onClick={() => {
-                        generationStore.specialTokenFilter.value =
-                            !generationStore.specialTokenFilter.value;
+                        tokenLevelViewStore.specialTokenFilter.value =
+                            !tokenLevelViewStore.specialTokenFilter.value;
                     }}
                 >
                     Show Special
                 </button>
                 <button
                     className={`btn btn-ghost ${
-                        generationStore.showLineInfo.value ? "btn-active" : ""
+                        tokenLevelViewStore.showLineInfo.value
+                            ? "btn-active"
+                            : ""
                     }`}
                     onClick={() => {
-                        generationStore.showLineInfo.value =
-                            !generationStore.showLineInfo.value;
+                        tokenLevelViewStore.showLineInfo.value =
+                            !tokenLevelViewStore.showLineInfo.value;
                     }}
                 >
                     Show Line Info

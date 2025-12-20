@@ -25,11 +25,11 @@ class Token:
 
     def to_dict(self) -> dict:
         data = {
-            "token": self.token_string,
+            "token_string": self.token_string,
             "token_id": self.token_id,
             "confidence": self.confidence,
             "position": self.position,
-            "tags": [t for t in self.token_types],
+            "token_types": [t for t in self.token_types],
             "alternative_tokens": [
                 alt_token.to_dict() for alt_token in self.alternative_tokens
             ],

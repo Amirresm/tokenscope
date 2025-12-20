@@ -1,18 +1,21 @@
-import { computed, signal } from "@preact/signals-react";
+import { signal } from "@preact/signals-react";
 
-type DrawerTab = "session" | "generation" | "stats" | "projects" | null;
+export enum DrawerTabsEnum {
+    SESSION = "session",
+    GENERATION = "generation",
+    STATS = "stats",
+    PROJECTS = "projects",
+}
 
 type DrawerState = {
     open: boolean;
-    tab: DrawerTab;
+    tab: DrawerTabsEnum;
 };
 
 const drawerStateSignal = signal<DrawerState>({
     open: false,
-    tab: "generation",
+    tab: DrawerTabsEnum.SESSION,
 });
-
-const drawerOpenSignal = computed(() => drawerStateSignal.value.open);
 
 function toggleDrawer() {
     drawerStateSignal.value = {
@@ -35,7 +38,7 @@ function openDrawer() {
     };
 }
 
-export function setDrawerTab(tab: DrawerTab) {
+export function setDrawerTab(tab: DrawerTabsEnum) {
     drawerStateSignal.value = {
         ...drawerStateSignal.value,
         tab,
@@ -44,7 +47,6 @@ export function setDrawerTab(tab: DrawerTab) {
 
 export default {
     drawerStateSignal,
-    drawerOpenSignal,
     toggleDrawer,
     closeDrawer,
     openDrawer,

@@ -3,13 +3,14 @@ import json
 
 from dataclasses import dataclass
 from src.generator.gen import StepResult
+from src.generator.token_node import Token
 from src.utils.jsonl import stream_jsonl
 
 
 @dataclass
 class Sample:
     task_id: str
-    tokens: list[StepResult]
+    tokens: list[Token]
     passed: bool | None = None
     details: dict | None = None
     tests: str | None = None
@@ -83,8 +84,28 @@ class StaticProvider:
         for data in stream_jsonl(full_generation_path):
             task_id = data.get("task_id")
             assert task_id is not None, "task_id is required in the data"
-            tokens = [
+            token_steps = [
                 StepResult.from_json(step) for step in data.get("tokens", [])
+            ]
+            tokens = [
+                Token(
+                    token_string=step.token,
+                    token_id=step.token_id,
+                    confidence=step.confidence,
+                    position=step.index,
+                    token_types=step.tags,
+                    alternative_tokens=[
+                        Token(
+                            token_string=step.all_tokens[i],
+                            token_id=step.all_tokens_ids[i],
+                            confidence=step.all_confidences[i],
+                            position=-1,
+                            token_types=[],
+                        )
+                        for i in range(len(step.all_tokens))
+                    ],
+                )
+                for step in token_steps
             ]
             sample = Sample(
                 task_id=task_id,
@@ -189,7 +210,7 @@ class StaticProvider:
 
         return {
             "task_id": sample.task_id,
-            "tokens": [step.to_json() for step in sample.tokens],
+            "tokens": sample.tokens,
             "passed": sample.passed,
             "details": sample.details,
             "tests": sample.tests,

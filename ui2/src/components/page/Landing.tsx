@@ -1,11 +1,11 @@
 import { ReactFlowProvider } from "@xyflow/react";
-import generationStore from "../../store/generationStore";
 import GenerationView from "../generation-view/generation-view";
 import GraphPage from "../graph/GraphPage";
 import { PromptInput } from "../PromptInput";
+import globalStore from "../../store/components/globalStore";
 
 export function LandingPage() {
-    const viewMode = generationStore.viewMode.value;
+    const viewMode = globalStore.viewMode.value;
     return (
         <ReactFlowProvider>
             <div className="flex flex-col h-full">

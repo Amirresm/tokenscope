@@ -3,22 +3,27 @@ import generationStore from "../../../store/generationStore";
 
 import * as ss from "simple-statistics";
 import projectsStore from "../../../store/projectsStore";
-import { ArrowLeft, ArrowRight, Check, X } from "@phosphor-icons/react";
-import projectsAPI from "../../../api/projectsAPI";
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    CheckIcon,
+    XIcon,
+} from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
+import { fetchProjectInfo, fetchSample } from "../../../api/projectsAPI";
 
 export default function StatsSidebar() {
-    const currentGeneration = generationStore.currentGenerationSignal.value;
+    const currentGeneration = generationStore.currentGeneration.value;
     const fimStartIndex = generationStore.fimStartToken.value;
     const fimEndIndex = generationStore.fimEndToken.value;
 
     const stats = React.useMemo(() => {
         const tokens = currentGeneration.filter(
             (token) =>
-                token.index > (fimStartIndex || -1) &&
-                token.index <= (fimEndIndex || 999999) &&
-                !token.tags.includes("prompt") &&
-                !token.tags.includes("manual"),
+                token.position > (fimStartIndex || -1) &&
+                token.position <= (fimEndIndex || 999999) &&
+                !token.tokenTypes.includes("prompt") &&
+                !token.tokenTypes.includes("manual"),
         );
 
         if (!tokens.length) {
@@ -46,8 +51,7 @@ export default function StatsSidebar() {
     const selectedProjectSampleInfo = projectsStore.selectedSampleInfo.value;
     const projectInfoQuery = useQuery({
         queryKey: ["projectInfo", selectedProject],
-        queryFn: () =>
-            projectsAPI.getProjectInfo({ projectName: selectedProject || "" }),
+        queryFn: () => fetchProjectInfo(selectedProject || ""),
         enabled: !!selectedProject,
     });
 
@@ -74,10 +78,7 @@ export default function StatsSidebar() {
             if (!selectedProject) {
                 return;
             }
-            const sample = await projectsAPI.getSample({
-                projectName: selectedProject,
-                taskId: sampleId,
-            });
+            const sample = await fetchSample(selectedProject, sampleId);
             if (!sample) {
                 return;
             }
@@ -89,6 +90,7 @@ export default function StatsSidebar() {
                 details: sample.details,
                 tests: sample.tests,
                 canonicalSolution: sample.canonicalSolution,
+                tokens: sample.tokens,
             };
 
             const tokens = sample.tokens;
@@ -146,17 +148,21 @@ export default function StatsSidebar() {
                         }}
                         disabled={!prevSampleTaskId}
                     >
-                        <ArrowLeft />
+                        <ArrowLeftIcon />
                     </button>
                     <div className="flex gap-1 items-center">
                         {selectedProjectSampleInfo.passed === true ? (
-                            <Check
+                            <CheckIcon
                                 size={24}
                                 color="green"
                                 className="inline-block"
                             />
                         ) : selectedProjectSampleInfo.passed === false ? (
-                            <X size={24} color="red" className="inline-block" />
+                            <XIcon
+                                size={24}
+                                color="red"
+                                className="inline-block"
+                            />
                         ) : null}
                         {selectedProjectSampleInfo.taskId}
                     </div>
@@ -169,7 +175,7 @@ export default function StatsSidebar() {
                         }}
                         disabled={!nextSampleTaskId}
                     >
-                        <ArrowRight />
+                        <ArrowRightIcon />
                     </button>
                 </div>
             )}

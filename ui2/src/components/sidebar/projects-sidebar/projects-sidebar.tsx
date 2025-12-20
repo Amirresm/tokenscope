@@ -1,9 +1,13 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import projectsAPI from "../../../api/projectsAPI";
-import { ArrowLeft, Check, Cross, X } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    CheckIcon,
+    XIcon,
+} from "@phosphor-icons/react";
 import generationStore from "../../../store/generationStore";
 import projectsStore from "../../../store/projectsStore";
+import { fetchProjectInfo, fetchProjects, fetchSample } from "../../../api/projectsAPI";
 
 type ProjectInfoPageProps = {
     projectName: string;
@@ -14,7 +18,7 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
 
     const projectInfoQuery = useQuery({
         queryKey: ["projectInfo", projectName],
-        queryFn: () => projectsAPI.getProjectInfo({ projectName }),
+        queryFn: () => fetchProjectInfo(projectName),
     });
 
     const appendToGeneration = generationStore.appendToGeneration;
@@ -22,10 +26,7 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
 
     const handleClick = React.useCallback(
         async (sampleId: string) => {
-            const sample = await projectsAPI.getSample({
-                projectName,
-                taskId: sampleId,
-            });
+            const sample = await fetchSample(projectName, sampleId);
             if (!sample) {
                 return;
             }
@@ -35,8 +36,9 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
                 taskId: sample.taskId,
                 passed: sample.passed,
                 details: sample.details,
-				tests: sample.tests,
-				canonicalSolution: sample.canonicalSolution,
+                tests: sample.tests,
+                canonicalSolution: sample.canonicalSolution,
+                tokens: sample.tokens,
             };
 
             const tokens = sample.tokens;
@@ -48,7 +50,7 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
         [appendToGeneration, clearGeneration, projectName],
     );
 
-	console.log(sampleInfo)
+    console.log(sampleInfo);
     return projectInfoQuery.isLoading || !projectInfoQuery.data ? (
         <div className="loading">
             <p>Loading...</p>
@@ -90,9 +92,9 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
                             >
                                 <a>
                                     {sample.p === true ? (
-                                        <Check size={16} color="green" />
+                                        <CheckIcon size={16} color="green" />
                                     ) : sample.p === false ? (
-                                        <X size={16} color="red" />
+                                        <XIcon size={16} color="red" />
                                     ) : null}{" "}
                                     {sample.id}
                                 </a>
@@ -112,10 +114,14 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
             <dialog id="solution-modal" className="modal">
                 <div className="modal-box w-10/12 max-w-11/12">
                     <h3 className="font-bold text-lg">Canonical Solution</h3>
-                    <p className="py-4 whitespace-break-spaces">{sampleInfo?.canonicalSolution}</p>
+                    <p className="py-4 whitespace-break-spaces">
+                        {sampleInfo?.canonicalSolution}
+                    </p>
                     <div className="divider"></div>
                     <h3 className="font-bold text-lg">Tests</h3>
-                    <p className="py-4 whitespace-break-spaces">{sampleInfo?.tests}</p>
+                    <p className="py-4 whitespace-break-spaces">
+                        {sampleInfo?.tests}
+                    </p>
                 </div>
                 <form method="dialog" className="modal-backdrop">
                     <button>close</button>
@@ -128,13 +134,13 @@ const ProjectInfoPage = ({ projectName }: ProjectInfoPageProps) => {
                             <h2 className="flex gap-1 items-center">
                                 {"Sample: "}
                                 {sampleInfo.passed === true ? (
-                                    <Check
+                                    <CheckIcon
                                         size={24}
                                         color="green"
                                         className="inline-block"
                                     />
                                 ) : sampleInfo.passed === false ? (
-                                    <X
+                                    <XIcon
                                         size={24}
                                         color="red"
                                         className="inline-block"
@@ -174,7 +180,7 @@ type ProjectListPageProps = {
 const ProjectListPage = ({ onSelect }: ProjectListPageProps) => {
     const projectQuery = useQuery({
         queryKey: ["projects"],
-        queryFn: projectsAPI.fetchProjects,
+        queryFn: fetchProjects,
     });
 
     return (
@@ -211,7 +217,7 @@ const ProjectSidebar = () => {
                             (projectsStore.selectedProject.value = null)
                         }
                     >
-                        <ArrowLeft size={24} />
+                        <ArrowLeftIcon size={24} />
                     </button>
                     <h2 className="text-xl font-bold">{selectedProject}</h2>
                 </div>
