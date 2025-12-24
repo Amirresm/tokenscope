@@ -7,13 +7,13 @@ import asyncio
 
 from src.ast_service.ast_service import ASTService
 from src.generator.gen_batch import BatchGenerator
-from src.generator.token_node import GenerationTree, TokenNode
+from src.generator.token_node import GenerationTree, Token, TokenNode
 from src.model.wrapper import (
     ControlTokenTypes,
     LlamaModelWrapper,
     QwenModelWrapper,
 )
-from src.generator.gen import Generator, StepResult
+from src.generator.gen import Generator
 
 
 @dataclass
@@ -76,18 +76,37 @@ class ModelState:
                 f"Branch {branch_id} not found in session {session_id}"
             )
 
+        data = {
+            "type": "session_info",
+            "content": {
+                "session_id": session_id,
+                "branch_id": branch_id,
+            },
+        }
+        data = json.dumps(data)
+        data += "\n"
+        yield data
+        await asyncio.sleep(0)
+
         print("Prefilling generation ...")
         for token_node in session.generation_tree.get_token_list(branch_id):
-            stringified_token = token_node.to_json()
-            stringified_token.replace("\n", "\\n")
-            stringified_token += "\n"
-            yield stringified_token
+            token_dict = token_node.to_dict()
+            data = {
+                "type": "token",
+                "content": token_dict,
+            }
+            data = json.dumps(data)
+            data.replace("\n", "\\n")
+            data += "\n"
+            yield data
             await asyncio.sleep(0)
 
     def get_ast(
         self,
         session_id: str,
         branch_id: str,
+        character_start: int,
+        character_end: int,
     ):
         session = self.sessions.get(session_id, None)
         if session is None:
@@ -99,24 +118,39 @@ class ModelState:
             )
 
         token_list = session.generation_tree.get_token_list(branch_id)
-        token_tuple_list = [
-            (t.token.token_string, t.token.token_id)
-            for t in token_list
-            if "special" not in t.token.token_types
+        filtered_token_list: list[Token] = []
+        currrent_character_pos = 0
+        for t in token_list:
+            token_text = t.token.token_string
+            token_length = len(token_text)
+            token_end_pos = currrent_character_pos + token_length
+            if token_end_pos < character_start:
+                currrent_character_pos += token_length
+                continue
+            if currrent_character_pos > character_end:
+                break
+            filtered_token_list.append(t.token)
+            currrent_character_pos += token_length
+
+        filtered_token_list = [
+            t for t in filtered_token_list if "special" not in t.token_types
         ]
 
         token_info_list, blocks, atomic_blocks = (
-            self.ast_service.map_ast_to_tokens(token_tuple_list)
+            self.ast_service.map_ast_to_tokens(filtered_token_list)
         )
+
+        for ti in token_info_list:
+            ti.token.alternative_tokens = []
 
         tokens_json = [
             {
-                "token_string": t.text,
-                "token_id": t.token_id,
+                "token": t.token,
                 "match": t.prominent_match,
                 "block_id": t.block.id if t.block else None,
                 "block_type": t.block.type if t.block else None,
                 "block_depth": t.block.depth if t.block else None,
+                "atomic_block": t.atomic_block,
                 "start": t.start,
                 "end": t.end,
                 "line_number": t.line_number,
@@ -140,6 +174,7 @@ class ModelState:
 
         atomic_blocks_json = [
             {
+                "id": ab.id,
                 "type": ab.type,
                 "depth": ab.depth,
                 "range": ab.range,
@@ -171,6 +206,18 @@ class ModelState:
         branch_id = f"branch_{self.branch_counter}"
         self.branch_counter += 1
 
+        data = {
+            "type": "session_info",
+            "content": {
+                "session_id": session_id,
+                "branch_id": branch_id,
+            },
+        }
+        data = json.dumps(data)
+        data += "\n"
+        yield data
+        await asyncio.sleep(0)
+
         print("Waiting for model lock ...")
         with self.generate_lock:
             print("Starting generation ...")
@@ -191,10 +238,15 @@ class ModelState:
                 )
                 session.generation_tree.add_token(token_node)
 
-                stringified_token = token_node.to_json()
-                stringified_token.replace("\n", "\\n")
-                stringified_token += "\n"
-                yield stringified_token
+                token_dict = token_node.to_dict()
+                data = {
+                    "type": "token",
+                    "content": token_dict,
+                }
+                data = json.dumps(data)
+                data.replace("\n", "\\n")
+                data += "\n"
+                yield data
                 await asyncio.sleep(0)
                 if step.stop:
                     print("Reaching end...")
@@ -222,6 +274,18 @@ class ModelState:
                 f"Branch {branch_id} not found in session {session_id}"
             )
 
+        data = {
+            "type": "session_info",
+            "content": {
+                "session_id": session_id,
+                "branch_id": branch_id,
+            },
+        }
+
+        data = json.dumps(data)
+        data += "\n"
+        yield data
+        await asyncio.sleep(0)
         new_branch_created = False
         if resume_old_branch:
             new_branch_id = branch_id
@@ -260,10 +324,15 @@ class ModelState:
                 prompt = prompt[:branch_position]
 
         for token_node in prompt:
-            stringified_token = token_node.to_json()
-            stringified_token.replace("\n", "\\n")
-            stringified_token += "\n"
-            yield stringified_token
+            token_dict = token_node.to_dict()
+            data = {
+                "type": "token",
+                "content": token_dict,
+            }
+            data = json.dumps(data)
+            data.replace("\n", "\\n")
+            data += "\n"
+            yield data
             await asyncio.sleep(0)
 
         prompt = [[t.token for t in prompt]]
@@ -300,10 +369,15 @@ class ModelState:
                 else:
                     session.generation_tree.add_token(token_node)
 
-                stringified_token = token_node.to_json()
-                stringified_token.replace("\n", "\\n")
-                stringified_token += "\n"
-                yield stringified_token
+                token_dict = token_node.to_dict()
+                data = {
+                    "type": "token",
+                    "content": token_dict,
+                }
+                data = json.dumps(data)
+                data.replace("\n", "\\n")
+                data += "\n"
+                yield data
                 await asyncio.sleep(0)
                 if step.stop:
                     print("Reaching end...")

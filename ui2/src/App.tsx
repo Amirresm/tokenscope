@@ -41,7 +41,7 @@ function App() {
                 checked={drawerOpen}
             />
             <div className="drawer-content transition-all h-screen mr-4 flex">
-                <div className="grow">
+                <div className="grow min-w-0">
                     <LandingPage />
                 </div>
                 <div className="flex flex-col items-center gap-2 my-4">

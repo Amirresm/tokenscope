@@ -11,8 +11,9 @@ from rich.console import Console
 from tqdm import tqdm
 
 
+from src.generator.token_node import Token
 from src.utils.text import visualize_whitespace
-from src.ast_service.block import Block, BlockDetector
+from src.ast_service.block import AtomicBlock, Block, BlockDetector
 from src.ast_service.type_detection import TypeDetector
 
 
@@ -30,11 +31,11 @@ class Match:
 
 @dataclass
 class TokenInfo:
-    text: str
-    token_id: int
+    token: Token
     prominent_match: Match | None
     matches: list[Match]
     block: Block | None
+    atomic_block: AtomicBlock | None
     start: int
     end: int
     line_number: int
@@ -50,9 +51,7 @@ class ASTService:
         self.type_detector = TypeDetector(self.parser)
         self.block_detector = BlockDetector(self.parser)
 
-    def map_parallel(
-        self, source_code_tokens_list: list[list[tuple[str, int]]]
-    ):
+    def map_parallel(self, source_code_tokens_list: list[list[Token]]):
         if len(source_code_tokens_list) < 10:
             print("Mapping AST to tokens in serial...")
             return [
@@ -73,9 +72,7 @@ class ASTService:
                 results.extend(self._map_parallel_worker(batch))
             return results
 
-    def _map_parallel_worker(
-        self, source_code_tokens_list: list[list[tuple[str, int]]]
-    ):
+    def _map_parallel_worker(self, source_code_tokens_list: list[list[Token]]):
         manager = mp.Manager()
         results: ListProxy[TokenInfo | None] = manager.list(
             [None] * len(source_code_tokens_list)
@@ -101,8 +98,8 @@ class ASTService:
 
         return list(results)
 
-    def map_ast_to_tokens(self, tokenized_code: list[tuple[str, int]]):
-        code = "".join([t[0] for t in tokenized_code])
+    def map_ast_to_tokens(self, tokenized_code: list[Token]):
+        code = "".join([t.token_string for t in tokenized_code])
         tree = self.parser.parse(code.encode("utf8"))
         token_types = self.type_detector.detect_token_types(
             code, tree.root_node
@@ -118,8 +115,9 @@ class ASTService:
         start_index = 0
 
         line_counter = 1
-        for token, token_id in tokens:
-            end_index = start_index + len(token)
+        for token in tokens:
+            token_string = token.token_string
+            end_index = start_index + len(token_string)
 
             matching_info, token_type_search_start_index = (
                 self._find_type_matches(
@@ -136,12 +134,16 @@ class ASTService:
                 blocks, start_index, end_index
             )
 
+            atomic_block_match = self._find_atomic_block_matches(
+                atomic_blocks, start_index, end_index
+            )
+
             token_type = TokenInfo(
-                text=token,
-                token_id=token_id,
+                token=token,
                 prominent_match=prominent_match,
                 matches=matching_info,
                 block=block_match,
+                atomic_block=atomic_block_match,
                 start=start_index,
                 end=end_index,
                 line_number=line_counter,
@@ -149,7 +151,7 @@ class ASTService:
             results.append(token_type)
 
             start_index = end_index
-            if "\n" in token:
+            if "\n" in token_string:
                 # line_counter += token.count("\n")
                 line_counter += 1
 
@@ -256,6 +258,33 @@ class ASTService:
         )
         return match[1]
 
+    def _find_atomic_block_matches(
+        self, blocks: list[AtomicBlock], start_index, end_index
+    ):
+        block_matches = []
+
+        for block in blocks:
+            if (
+                block.range.start <= start_index
+                and block.range.end >= end_index
+            ):
+                block_matches.append(("full", block))
+            elif (
+                block.range.start >= start_index
+                and block.range.start <= end_index
+            ):
+                block_matches.append(("start_inside", block))
+            elif (
+                block.range.end >= start_index and block.range.end <= end_index
+            ):
+                block_matches.append(("end_inside", block))
+        if len(block_matches) == 0:
+            return None
+        match = next(
+            iter([m for m in block_matches if m[0] == "full"]), block_matches[0]
+        )
+        return match[1]
+
     def report_tokens(self, enriched_tokens: list[TokenInfo]):
         console = Console()
         table = Table(title="Token Analysis Results")
@@ -273,8 +302,8 @@ class ASTService:
         # table.add_column("MStart-End", style="bold white")
 
         for res in enriched_tokens:
-            token = visualize_whitespace(res.text)
-            token_id = res.token_id
+            token = visualize_whitespace(res.token.token_string)
+            token_id = res.token.token_id
             prominent_match = res.prominent_match
 
             table.add_row(
@@ -318,7 +347,7 @@ class ASTService:
                     color = "magenta"
 
             # text = visualize_whitespace(token.text)
-            text = token.text
+            text = token.token.token_string
             print(f"[{color}]{text}[/{color}]", end="")
         print()
 
@@ -338,7 +367,7 @@ class ASTService:
             if token.block is not None:
                 color = text_colors[token.block.id % len(text_colors)]
 
-            print(f"[{color}]{token.text}[/{color}]", end="")
+            print(f"[{color}]{token.token.token_string}[/{color}]", end="")
         print()
 
     @staticmethod
@@ -359,7 +388,7 @@ class ASTService:
             if line_number != last_line_number:
                 if last_line_number != -1:
                     print(line_number, end="")
-            print(f"[{color}]{token.text}[/{color}]", end="")
+            print(f"[{color}]{token.token.token_string}[/{color}]", end="")
             last_line_number = line_number
         print()
 
@@ -426,7 +455,13 @@ if __name__ == '__main__':
     #
     # ASTService.type_pretty_print(results[995])
     tokenized_code = [
-        (ast_service.tokenizer.decode([tid]), tid)
+        Token(
+            token_string=ast_service.tokenizer.decode([tid]),
+            token_id=tid,
+            position=-1,
+            confidence=1.0,
+            token_types=[],
+        )
         for tid in ast_service.tokenizer.encode(code)
     ]
 

@@ -1,0 +1,28 @@
+.atomic-block {
+    position: relative;
+    /* min-width: 100px; */
+    /* border: 1px solid orange; */
+}
+.atomic-block::before {
+    /* content: ""; */
+    position: absolute;
+    width: 2px;
+    top: 0;
+    left: -172px;
+    width: 300px;
+    font-size: 12px;
+    /* height: 100%; */
+    /* padding: 2px 5px; */
+    height: calc(100% - 0px);
+    border-left: 3px solid var(--block-border-color, orange);
+    /* border-right: 1px solid var(--block-border-color, orange); */
+    /* border-top: 1px solid var(--block-border-color, orange); */
+    /* border-bottom: 1px solid var(--block-border-color, orange); */
+}
+
+.atomic-block:hover {
+    background-color: var(--block-hover-bg-color, rgba(255, 165, 0, 0.1));
+}
+.atomic-block:hover::before {
+    border-left-color: var(--block-hover-border-color, red);
+}

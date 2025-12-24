@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: main server",
+            "type": "debugpy",
+            "module": "main",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "args": ["server"]
+        }
+    ]
+}

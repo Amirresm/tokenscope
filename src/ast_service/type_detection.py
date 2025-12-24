@@ -40,6 +40,8 @@ class TokenType:
             self.priority = 89
         elif self.category == "literal":
             self.priority = 79
+        elif self.category == "comment":
+            self.priority = 78
         elif self.category == "delimiter":
             self.priority = 69
         elif self.category == "fill":
@@ -73,8 +75,11 @@ class TypeDetector:
         node: Node,
         source_code,
         depth=0,
-        token_types: list[TokenType] = [],
+        token_types: list[TokenType] | None = None,
     ):
+        if token_types is None:
+            token_types = []
+
         if depth > 32:
             return token_types
 

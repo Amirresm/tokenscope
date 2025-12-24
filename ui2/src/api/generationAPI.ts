@@ -4,7 +4,18 @@ import {
     generationTokenFromData,
 } from "../models/generationToken";
 import generationStore from "../store/generationStore";
+import sessionStore from "../store/sessionStore";
 import { API_BASE_URL } from "./constants";
+
+type TojenGenerationData =
+    | {
+          type: "token";
+          content: GenerationTokenData;
+      }
+    | {
+          type: "session_info";
+          content: { session_id: string; branch_id: string };
+      };
 
 const handleTokenGenerationStream = async (
     response: Response,
@@ -28,7 +39,7 @@ const handleTokenGenerationStream = async (
             if (text === "") {
                 return;
             }
-            let data: GenerationTokenData;
+            let data: TojenGenerationData;
             try {
                 data = JSON.parse(text);
             } catch (error) {
@@ -37,16 +48,26 @@ const handleTokenGenerationStream = async (
                 return;
             }
 
-            // const attentionSnapshot = data.attention_snapshot
-            //     ? data.attention_snapshot.map((snapshot: [number, string][]) =>
-            //           snapshot.map((value) => ({
-            //               index: value[0],
-            //               attention: parseFloat(value[1]),
-            //           })),
-            //       )
-            //     : undefined;
+            if (data.type === "session_info") {
+                sessionStore.branchId.value = data.content.branch_id;
+                sessionStore.sessionId.value = data.content.session_id;
+            } else if (data.type === "token") {
+                // const attentionSnapshot = data.attention_snapshot
+                //     ? data.attention_snapshot.map((snapshot: [number, string][]) =>
+                //           snapshot.map((value) => ({
+                //               index: value[0],
+                //               attention: parseFloat(value[1]),
+                //           })),
+                //       )
+                //     : undefined;
 
-            handleData(generationTokenFromData(data));
+                handleData(generationTokenFromData(data.content));
+            } else {
+                console.warn(
+                    "Unknown data type received at generation stream:",
+                    data,
+                );
+            }
         });
     }
     reader.releaseLock();

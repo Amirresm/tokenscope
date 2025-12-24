@@ -110,6 +110,7 @@ class LlamaModelWrapper(ModelWrapper):
         q4bit: bool = False,
     ):
         super().__init__(model_name, device, model, tokenizer, q4bit)
+        self.t.pad_token = self.t.eos_token
         self.control_tokens = {
             ControlTokenTypes.BOS: self.t.bos_token,
             ControlTokenTypes.EOS: self.t.eos_token,

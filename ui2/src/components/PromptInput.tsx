@@ -89,10 +89,23 @@ export function PromptInput() {
         }
     }, []);
 
-    const handleToggleViewMode = React.useCallback(() => {
-        globalStore.viewMode.value =
-            viewMode === "generation" ? "graph" : "generation";
-    }, [viewMode]);
+    const handleChangeColorVerbosity = React.useCallback(
+        (option: ColorVerbosityEnum) => () => {
+            const activeElement = document.activeElement as HTMLElement;
+            activeElement?.blur();
+            tokenLevelViewStore.colorVerbosity.value = option;
+        },
+        [],
+    );
+
+    const handleChangeViewMode = React.useCallback(
+        (mode: "generation" | "graph" | "ast") => () => {
+            const activeElement = document.activeElement as HTMLElement;
+            activeElement?.blur();
+            globalStore.viewMode.value = mode;
+        },
+        [],
+    );
 
     const colorVerbosityOptions = Object.values(ColorVerbosityEnum);
 
@@ -116,24 +129,32 @@ export function PromptInput() {
                         {colorVerbosityOptions.map((option) => (
                             <li
                                 key={option}
-                                onClick={() =>
-                                    (tokenLevelViewStore.colorVerbosity.value =
-                                        option)
-                                }
+                                onClick={handleChangeColorVerbosity(option)}
                             >
                                 <a>{option}</a>
                             </li>
                         ))}
                     </ul>
                 </div>
-                <button
-                    className="btn btn-ghost"
-                    onClick={handleToggleViewMode}
-                >
-                    {viewMode === "generation"
-                        ? "Generation View"
-                        : "Graph View"}
-                </button>
+                <div className="dropdown">
+                    <div tabIndex={0} role="button" className="btn m-1">
+                        View Mode: {viewMode}
+                    </div>
+                    <ul
+                        tabIndex={0}
+                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                    >
+                        <li onClick={handleChangeViewMode("generation")}>
+                            <a>Generation View</a>
+                        </li>
+                        <li onClick={handleChangeViewMode("graph")}>
+                            <a>Graph View</a>
+                        </li>
+                        <li onClick={handleChangeViewMode("ast")}>
+                            <a>AST View</a>
+                        </li>
+                    </ul>
+                </div>
                 <button
                     className={`btn btn-ghost ${
                         !tokenLevelViewStore.specialTokenFilter.value

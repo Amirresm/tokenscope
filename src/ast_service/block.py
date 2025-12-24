@@ -60,6 +60,7 @@ class Block:
 
 @dataclass
 class AtomicBlock:
+    id: int
     range: SourceRange
     type: str
     source: str
@@ -132,6 +133,7 @@ class BlockDetector:
                 parent_id=None,
             )
             current_block = root_block
+            depth += 1
 
         elif self.is_node_block(node):
             parent_node = node.parent
@@ -263,6 +265,7 @@ class BlockDetector:
         if len(root_block.children) == 0:
             atomic_blocks.append(
                 AtomicBlock(
+                    id=root_block.id,
                     range=root_block.total_range,
                     type=root_block.type,
                     source=root_block.source,
@@ -291,6 +294,7 @@ class BlockDetector:
             ):
                 atomic_blocks.append(
                     AtomicBlock(
+                        id=root_block.id,
                         range=first_ur,
                         type=root_block.type,
                         source=sources[0],
@@ -314,6 +318,7 @@ class BlockDetector:
                         ):
                             atomic_blocks.append(
                                 AtomicBlock(
+                                    id=root_block.id,
                                     range=ur,
                                     type=root_block.type,
                                     source=source,
@@ -334,6 +339,7 @@ class BlockDetector:
             ):
                 atomic_blocks.append(
                     AtomicBlock(
+                        id=root_block.id,
                         range=last_ur,
                         type=root_block.type,
                         source=sources[-1],

@@ -63,12 +63,16 @@ async def get_ast(
     request: fastapi.Request,
     session_id: str,
     branch_id: str,
+    start: int,
+    end: int,
 ):
     model_state = typing.cast(ModelState, request.state.model_state)
 
     ast = model_state.get_ast(
         session_id,
         branch_id,
+        start,
+        end,
     )
 
     return ast
@@ -184,10 +188,10 @@ def create_app():
     @asynccontextmanager
     async def lifespan(_: fastapi.FastAPI):
         model_path = (
-            # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B-Instruct"
+            "/storage/c/ai/models/llm/llama-3.2-3B-Instruct"
             # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
             # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
-            "/storage/c/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
+            # "/storage/c/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B-Instruct"
         )
         model_state = ModelState(model_path)
 
