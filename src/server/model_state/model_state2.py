@@ -7,6 +7,7 @@ import asyncio
 
 from src.ast_service.ast_service import ASTService
 from src.generator.gen_batch import BatchGenerator
+from src.generator.openai_generator import OpenAIGenerator
 from src.generator.token_node import GenerationTree, Token, TokenNode
 from src.model.wrapper import (
     ControlTokenTypes,
@@ -24,27 +25,33 @@ class Session:
 
 class ModelState:
     def __init__(self, model_path: str) -> None:
-        Wrapper = (
-            LlamaModelWrapper
-            if "llama" in model_path.lower()
-            else QwenModelWrapper if "qwen" in model_path.lower() else None
-        )
-        assert Wrapper is not None, f"Unsupported model: {model_path}"
-        wrapper = Wrapper(model_path, q4bit=False)
         self.generate_lock = threading.Lock()
+        # Wrapper = (
+        #     LlamaModelWrapper
+        #     if "llama" in model_path.lower()
+        #     else QwenModelWrapper if "qwen" in model_path.lower() else None
+        # )
+        # assert Wrapper is not None, f"Unsupported model: {model_path}"
+        # wrapper = Wrapper(model_path, q4bit=False)
 
-        self.generator = Generator(
-            wrapper,
-            stop_tokens=[ControlTokenTypes.EOS],
-            topk=5,
-            force_greedy=True,
-        )
+        # self.generator = Generator(
+        #     wrapper,
+        #     stop_tokens=[ControlTokenTypes.EOS],
+        #     topk=5,
+        #     force_greedy=True,
+        # )
 
-        self.batch_generator = BatchGenerator(
-            wrapper,
-            stop_tokens=[ControlTokenTypes.EOS],
-            topk=5,
-            force_greedy=True,
+        # self.batch_generator = BatchGenerator(
+        #     wrapper,
+        #     stop_tokens=[ControlTokenTypes.EOS],
+        #     topk=5,
+        #     force_greedy=True,
+        # )
+        available_models = OpenAIGenerator.get_available_models()
+        model_info = [m for m in available_models if "llama-3.1" in m["id"]][0]
+        self.batch_generator = OpenAIGenerator(
+            model_name=model_info["id"],
+            model_hf_id=model_info["hugging_face_id"],
         )
 
         self.ast_service = ASTService()
@@ -229,6 +236,7 @@ class ModelState:
                 record_attention=True,
             ):
                 step = batch[0]
+                print(step.token.token_string, end="")
                 if should_stop and await should_stop():
                     print("Stopping generation ...")
                     break

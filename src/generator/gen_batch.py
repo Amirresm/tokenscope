@@ -1,4 +1,3 @@
-from typing import Callable, Literal
 from dataclasses import dataclass
 import typing
 
@@ -8,52 +7,6 @@ import time
 
 from src.generator.token_node import Token
 from src.model.wrapper import ControlTokenTypes, ModelWrapper
-
-type TokenType = ControlTokenTypes | Literal["prompt"] | None
-type StreamCallback = Callable[[str, TokenType], bool | None]
-
-
-@dataclass
-class StepResult:
-    index: int
-    token: str
-    token_id: int
-    confidence: float
-    all_tokens: list[str]
-    all_tokens_ids: list[int]
-    all_confidences: list[float]
-    tags: list[str]
-    stop: bool = False
-
-    attention_snapshot: list[list[tuple[int, float]]] | None = None
-
-    def to_dict(self):
-        attention_snapshot = (
-            [
-                [[h[0], f"{h[1]:.3f}"] for h in head]
-                for head in self.attention_snapshot
-            ]
-            if self.attention_snapshot
-            else None
-        )
-
-        return {
-            "index": self.index,
-            "token": self.token,
-            "token_id": self.token_id,
-            "confidence": self.confidence,
-            "all_tokens_ids": self.all_tokens_ids,
-            "all_tokens": self.all_tokens,
-            "all_confidences": self.all_confidences,
-            "tags": self.tags,
-            "stop": self.stop,
-            "attention_snapshot": attention_snapshot,
-        }
-
-    @staticmethod
-    def from_dict(json_obj):
-        base = StepResult(**json_obj)
-        return base
 
 
 @dataclass

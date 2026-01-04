@@ -85,7 +85,7 @@ async def generate(request: fastapi.Request, request_data: dict):
     attn_layer = request_data.get("attn_layer", None)
 
     model_state = typing.cast(ModelState, request.state.model_state)
-    model_state.generator.set_attn_layer(attn_layer)
+    # model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -111,7 +111,7 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
     attn_layer = request_data.get("attn_layer", None)
 
     model_state = typing.cast(ModelState, request.state.model_state)
-    model_state.generator.set_attn_layer(attn_layer)
+    # model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
