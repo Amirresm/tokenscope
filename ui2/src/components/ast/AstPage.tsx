@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import sessionStore from "../../store/sessionStore";
 import { fetchASTData } from "../../api/astAPI";
-import "./blockView.css";
 import React from "react";
 import generationStore from "../../store/generationStore";
 import { BlockView } from "./BlockView";
 import { GenericAstView } from "./GenericAstView";
+import astStore from "../../store/components/astStore";
 
 type RangeSelectorProps = {
     source: string;
@@ -54,14 +54,11 @@ export function AstPage() {
     const sessionId = sessionStore.sessionId.value;
     const branchId = sessionStore.branchId.value;
 
+    const selectedRange = astStore.selectedRange.value;
+
     const [viewMode, setViewMode] = React.useState<ViewModesEnum>(
         ViewModesEnum.Type,
     );
-
-    const [selectedRange, setSelectedRange] = React.useState<{
-        start: number;
-        end: number;
-    } | null>(null);
 
     const source = generationStore.currentGeneration.value
         ?.map((t) => t.token)
@@ -84,7 +81,7 @@ export function AstPage() {
                         <RangeSelector
                             source={source}
                             onSelectRange={(start, end) =>
-                                setSelectedRange({ start, end })
+                                (astStore.selectedRange.value = { start, end })
                             }
                         />
                     </>

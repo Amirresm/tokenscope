@@ -1,9 +1,11 @@
 import React from "react";
 import { AstTokenInfo, AtomicBlock } from "../../models/ast";
 import { ViewModesEnum } from "./AstPage";
-import "./blockView.css";
+import "./GenericAstView.css";
 import { GenerationTokenData } from "../../models/generationToken";
 import { getUniqueColor } from "../../utils/unqiueColorGenerator";
+import generationStore from "../../store/generationStore";
+import globalStore from "../../store/components/globalStore";
 
 function visualizeWhitespace(str: string) {
     return str;
@@ -108,7 +110,14 @@ export function GenericAstView({
                                 t.averageConfidence * 100
                             ).toFixed(2)}% for ${t.tokens.length} tokens)`}
                         >
-                            <span className="hover:font-bold hover:text-white">
+                            <span
+                                className="hover:font-bold hover:text-white"
+                                onClick={() => {
+                                    // TODO: 
+                                    // generationStore.selectedToken.value = tk;
+                                    // globalStore.viewMode.value = "generation";
+                                }}
+                            >
                                 {visualizeWhitespace(tk.token_string)}
                             </span>
                         </span>
