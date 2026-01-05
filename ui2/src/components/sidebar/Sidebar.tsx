@@ -6,7 +6,18 @@ import drawerStore from "../../store/components/drawerStore";
 
 export function Sidebar() {
     return (
-        <div className="w-80 h-full flex flex-row p-4 pl-0">
+        <div className="w-80 h-full flex flex-col p-4 pl-0">
+            <button
+                className="btn btn-ghost btn-primary mb-4"
+                onClick={() => {
+                    const modal = document.getElementById(
+                        "llm_management_modal",
+                    ) as HTMLDialogElement;
+                    modal.showModal();
+                }}
+            >
+                Change LLM
+            </button>
             {(() => {
                 if (drawerStore.drawerStateSignal.value.tab === "session")
                     return <SessionSidebar />;

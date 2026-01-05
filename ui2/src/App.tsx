@@ -8,6 +8,7 @@ import { LandingPage } from "./components/page/Landing";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import React from "react";
 import drawerStore, { DrawerTabsEnum } from "./store/components/drawerStore";
+import { LLMManagementModal } from "./components/llm-management/LLMManagementModal";
 
 const tabs = [
     { tab: DrawerTabsEnum.SESSION, icon: UserIcon },
@@ -42,6 +43,7 @@ function App() {
             />
             <div className="drawer-content transition-all h-screen mr-4 flex">
                 <div className="grow min-w-0">
+                    <LLMManagementModal />
                     <LandingPage />
                 </div>
                 <div className="flex flex-col items-center gap-2 my-4">

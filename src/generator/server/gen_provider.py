@@ -17,6 +17,7 @@ class ModelSource(str, Enum):
 class GeneratorProvider:
     def __init__(self):
         self.model_source: ModelSource | None = None
+        self.model_name_or_path: str | None = None
         self.generator: Generator | None = None
 
     def load_model(self, source: ModelSource, model_name_or_path: str):
@@ -28,7 +29,6 @@ class GeneratorProvider:
             raise ValueError(f"Unsupported source: {source}")
 
     def load_transformers(self, model_name_or_path: str):
-        self.model_source = ModelSource.TRANSFORMERS
         Wrapper = (
             LlamaModelWrapper
             if "llama" in model_name_or_path.lower()
@@ -47,9 +47,10 @@ class GeneratorProvider:
             topk=5,
             force_greedy=True,
         )
+        self.model_source = ModelSource.TRANSFORMERS
+        self.model_name_or_path = model_name_or_path
 
     def load_openai(self, model_name_or_path: str):
-        self.model_source = ModelSource.OPENAI
         available_models = OpenAIGenerator.get_available_models()
         model_info = [
             m for m in available_models if model_name_or_path == m["id"]
@@ -59,6 +60,8 @@ class GeneratorProvider:
             model_name=model_info["id"],
             model_hf_id=model_info["metadata"]["hugging_face_id"],
         )
+        self.model_source = ModelSource.OPENAI
+        self.model_name_or_path = model_name_or_path
 
     def get_available_models(self, source: ModelSource):
         if source == ModelSource.TRANSFORMERS:

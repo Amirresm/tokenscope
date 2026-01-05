@@ -4,11 +4,58 @@ import fastapi
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import requests
 
+from src.generator.server.gen_provider import ModelSource
 from src.providers.static_provider import StaticProvider
 from src.server.model_state.model_state2 import ModelState
 
 router = fastapi.APIRouter()
+
+GEN_URL = "http://localhost:3001/gen"
+
+
+@router.get("/current_model")
+async def current_model():
+    response = requests.get(f"{GEN_URL}/current_model")
+    response_data = response.json()
+
+    model_source = response_data.get("model_source")
+    current_model = response_data.get("current_model")
+
+    return {
+        "model_source": model_source,
+        "current_model": current_model,
+    }
+
+
+@router.get("/available_models")
+async def available_models(source: str):
+    model_source = ModelSource(source)
+    response = requests.get(
+        f"{GEN_URL}/available_models", params={"source": model_source.value}
+    )
+    response_data = response.json()
+
+    models = response_data.get("models", [])
+    return {"models": models}
+
+
+@router.post("/load_model")
+async def load_model(payload: dict):
+    source = ModelSource(payload["source"])
+    model_name_or_path = payload["model_name_or_path"]
+
+    response = requests.post(
+        f"{GEN_URL}/load_model",
+        json={
+            "source": source.value,
+            "model_name_or_path": model_name_or_path,
+        },
+    )
+    response_data = response.json()
+
+    return response_data
 
 
 @router.get("/sessions")

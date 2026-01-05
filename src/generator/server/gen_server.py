@@ -18,6 +18,19 @@ async def health_check():
     return {"status": "ok"}
 
 
+@router.get("/current_model")
+async def current_model(request: Request):
+    provider: GeneratorProvider = request.app.state.provider
+
+    model_source = provider.model_source
+    current_model = provider.model_name_or_path
+
+    return {
+        "model_source": model_source,
+        "current_model": current_model,
+    }
+
+
 @router.get("/available_models")
 async def available_models(request: Request, source: str):
     provider: GeneratorProvider = request.app.state.provider
