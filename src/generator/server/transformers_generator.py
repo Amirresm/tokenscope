@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 import typing
 
@@ -5,6 +6,7 @@ import numpy as np
 import torch
 import time
 
+from src.generator.generator import Generator
 from src.generator.token_node import Token
 from src.model.wrapper import ControlTokenTypes, ModelWrapper
 
@@ -16,7 +18,18 @@ class GeneratorItem:
     fresh: bool
 
 
-class BatchGenerator:
+class BatchGenerator(Generator):
+    @staticmethod
+    def get_available_models(
+        models_directory="/storage/c/ai/models/llm",
+    ):
+        model_dirs = []
+        for root, _, files in os.walk(models_directory):
+            if "config.json" in files and "tokenizer_config.json" in files:
+                model_dirs.append(root)
+        model_dirs = [{"id": d, "metadata": {}} for d in model_dirs]
+        return model_dirs
+
     def __init__(
         self,
         model: ModelWrapper,
@@ -137,6 +150,48 @@ class BatchGenerator:
 
         self.model.t.padding_side = old_padding_side
 
+    def prompts_to_token(self, prompts: list[str]):
+        tokenized = self.model.t(
+            prompts,
+            padding="longest",
+            max_length=512,
+            return_tensors="pt",
+        ).to(self.device)
+        input_ids: torch.Tensor = tokenized.input_ids
+
+        generation_results: list[list[Token]] = [
+            [] for _ in range(len(prompts))
+        ]
+
+        for j in range(input_ids.shape[1]):
+            tokens = self.model.t.batch_decode(input_ids[:, j])
+            for i in range(input_ids.shape[0]):
+                token_id = int(input_ids[i, j].item())
+                token = tokens[i]
+
+                tags = []
+
+                control_type = self.model.get_control_token_type(token)
+                if control_type is not None:
+                    tags.append("special")
+                    if control_type == ControlTokenTypes.EOS:
+                        tags.append(ControlTokenTypes.PAD.name.lower())
+                    else:
+                        tags.append(control_type.name.lower())
+
+                prompt_step_result = Token(
+                    position=j,
+                    token_string=token,
+                    token_id=token_id,
+                    confidence=1.0,
+                    alternative_tokens=[],
+                    token_types=tags,
+                )
+
+                generation_results[i].append(prompt_step_result)
+
+        return generation_results
+
     def _prepare_prompts(self, prompts: list[str]):
         tokenized = self.model.t(
             prompts,
@@ -243,7 +298,7 @@ class BatchGenerator:
             attention_results = self.record_attentions(output.attentions)
 
         step_tokens = []
-        for result in results:
+        for batch_index, result in enumerate(results):
             token_id, confidence, all_token_ids, all_confidences = result
             decoded_token = self.model.ids_to_str(token_id)
             token_control_type = self.model.get_control_token_type(
@@ -270,6 +325,10 @@ class BatchGenerator:
             #         attention_results[i] if attention_results else None
             #     ),
             # )
+            attention_snapshot = (
+                attention_results[batch_index] if attention_results else None
+            )
+
             step_result = Token(
                 position=index,
                 token_string=decoded_token,
@@ -286,6 +345,7 @@ class BatchGenerator:
                     )
                     for tok_id, conf in zip(all_token_ids, all_confidences)
                 ],
+                attention_snapshot=attention_snapshot,
             )
             should_stop = self._check_stop_token(decoded_token)
             step_tokens.append((step_result, should_stop))
@@ -359,22 +419,25 @@ class BatchGenerator:
         # Top-k for each head in each batch item: returns (B, H, K)
         top_vals, top_idxs = torch.topk(attn_rows, k=attn_top_n, dim=-1)
 
-        attention_snapshots = []
+        attention_snapshots: list[dict[str, list[tuple[int, float]]]] = []
 
         for b in range(batch_size):
-            snapshot = []
+            # snapshot: list[list[tuple[int, float]]] = []
+            snapshot: dict[str, list[tuple[int, float]]] = {}
 
             for h in range(num_heads):
                 indices = top_idxs[b, h].tolist()
                 values = top_vals[b, h].tolist()
                 head_topk = list(zip(indices, values))
-                snapshot.append(head_topk)
+                # snapshot.append(head_topk)
+                snapshot[f"head_{h}"] = head_topk
 
             # Mean attention across heads: (S,)
             mean_row = attn_rows[b].mean(dim=0)  # (S,)
             mean_top_vals, mean_top_idxs = torch.topk(mean_row, k=attn_top_n)
             mean_top = list(zip(mean_top_idxs.tolist(), mean_top_vals.tolist()))
-            snapshot.append(mean_top)
+            # snapshot.append(mean_top)
+            snapshot["mean"] = mean_top
 
             attention_snapshots.append(snapshot)
 

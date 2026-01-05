@@ -52,15 +52,6 @@ const handleTokenGenerationStream = async (
                 sessionStore.branchId.value = data.content.branch_id;
                 sessionStore.sessionId.value = data.content.session_id;
             } else if (data.type === "token") {
-                // const attentionSnapshot = data.attention_snapshot
-                //     ? data.attention_snapshot.map((snapshot: [number, string][]) =>
-                //           snapshot.map((value) => ({
-                //               index: value[0],
-                //               attention: parseFloat(value[1]),
-                //           })),
-                //       )
-                //     : undefined;
-
                 handleData(generationTokenFromData(data.content));
             } else {
                 console.warn(

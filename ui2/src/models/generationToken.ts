@@ -1,3 +1,6 @@
+type AttentionSnapshotData = Record<string, [string, string][]>;
+type AttentionSnapshot = Record<string, { index: number; attention: number }[]>;
+
 export type GenerationTokenData = {
     token_string: string;
     token_id: number;
@@ -5,6 +8,7 @@ export type GenerationTokenData = {
     position: number;
     token_types: string[];
     alternative_tokens?: GenerationTokenData[];
+    attention_snapshot?: AttentionSnapshotData;
 
     branch_id: string;
 };
@@ -17,7 +21,7 @@ export type GenerationToken = {
     tokenTypes: string[];
     alternativeTokens?: GenerationToken[];
     branchId?: string;
-    attentionSnapshot?: number[][];
+    attentionSnapshot?: AttentionSnapshot;
 
     stop?: boolean;
     prompt?: boolean;
@@ -32,6 +36,19 @@ export type GenerationToken = {
 export function generationTokenFromData(
     data: GenerationTokenData,
 ): GenerationToken {
+    let attentionSnapshot: AttentionSnapshot | undefined = undefined;
+    if (data.attention_snapshot) {
+        attentionSnapshot = {};
+        for (const head in data.attention_snapshot) {
+            attentionSnapshot[head] = data.attention_snapshot[head].map(
+                (pair) => ({
+                    index: parseInt(pair[0], 10),
+                    attention: parseFloat(pair[1]),
+                }),
+            );
+        }
+    }
+
     return {
         token: data.token_string,
         tokenId: data.token_id,
@@ -47,6 +64,7 @@ export function generationTokenFromData(
                   generationTokenFromData(token),
               )
             : undefined,
+        attentionSnapshot: attentionSnapshot,
         stop: data.token_types.includes("stop"),
         prompt: data.token_types.includes("prompt"),
         manual: data.token_types.includes("manual"),

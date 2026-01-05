@@ -22,6 +22,7 @@ class Token:
     # token_types: set[TokenType]
     token_types: list[str]
     alternative_tokens: list["Token"] = field(default_factory=list)
+    attention_snapshot: dict[str, list[tuple[int, float]]] | None = None
 
     def to_dict(self) -> dict:
         data = {
@@ -33,11 +34,34 @@ class Token:
             "alternative_tokens": [
                 alt_token.to_dict() for alt_token in self.alternative_tokens
             ],
+            "attention_snapshot": self.attention_snapshot,
         }
         return data
 
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
+    @staticmethod
+    def from_dict(data: dict) -> "Token":
+        alternative_tokens = [
+            Token.from_dict(alt_token_data)
+            for alt_token_data in data.get("alternative_tokens", [])
+        ]
+        attention_snapshot: dict[str, list[tuple[int, float]]] | None = None
+        if "attention_snapshot" in data and data["attention_snapshot"] is not None:
+            attention_snapshot = {}
+            for key, value in data["attention_snapshot"].items():
+                attention_snapshot[key] = []
+                for a in value:
+                    attention_snapshot[key].append((a[0], a[1]))
+
+        token = Token(
+            token_string=data["token_string"],
+            token_id=data["token_id"],
+            confidence=data["confidence"],
+            position=data["position"],
+            token_types=data.get("token_types", []),
+            alternative_tokens=alternative_tokens,
+            attention_snapshot=attention_snapshot,
+        )
+        return token
 
 
 @dataclass
@@ -54,9 +78,6 @@ class TokenNode:
         token_data["branch_id"] = self.branch_id
 
         return token_data
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
 
 
 @dataclass

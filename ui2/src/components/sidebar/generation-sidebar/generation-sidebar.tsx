@@ -48,14 +48,24 @@ export function Content({ token }: { token: GenerationToken }) {
     const attentionTargetToken = generationStore.attentionTargetToken.value;
     const attentionTargetHead = generationStore.attentionTargetHead.value;
 
-    const attentionTargetHeadCount =
-        currentGeneration.find(
+    // const attentionTargetHeadCount =
+    //     currentGeneration.find(
+    //         (t) =>
+    //             t.attentionSnapshot?.length && t.attentionSnapshot.length > 0,
+    //     )?.attentionSnapshot?.length || 0;
+    // const attentionTargetHeadOptions = [
+    //     ...Array(attentionTargetHeadCount).keys(),
+    // ];
+    const attentionTargetHeadOptions = React.useMemo(() => {
+        if (currentGeneration.length === 0) return [];
+        const firstWithAttention = currentGeneration.find(
             (t) =>
-                t.attentionSnapshot?.length && t.attentionSnapshot.length > 0,
-        )?.attentionSnapshot?.length || 0;
-    const attentionTargetHeadOptions = [
-        ...Array(attentionTargetHeadCount).keys(),
-    ];
+                t.attentionSnapshot &&
+                Object.keys(t.attentionSnapshot).length > 0,
+        );
+        if (!firstWithAttention) return [];
+        return Object.keys(firstWithAttention.attentionSnapshot!);
+    }, [currentGeneration]);
 
     const handleNextToken = React.useCallback(() => {
         if (nextToken) {
@@ -238,7 +248,7 @@ export function Content({ token }: { token: GenerationToken }) {
                             className="btn btn-ghost btn-sm"
                         >
                             <span
-                                className={`${attentionTargetHeadCount === 0 ? "text-gray-500" : ""}`}
+                                className={`${attentionTargetHeadOptions.length === 0 ? "text-gray-500" : ""}`}
                             >
                                 Head {attentionTargetHead}
                             </span>
@@ -264,7 +274,7 @@ export function Content({ token }: { token: GenerationToken }) {
                     <button
                         className="btn btn-ghost grow"
                         onClick={handleSetAttentionTargetToken}
-                        disabled={attentionTargetHeadCount === 0}
+                        disabled={attentionTargetHeadOptions.length === 0}
                     >
                         {token.position === attentionTargetToken?.position
                             ? "Remove Attention Target"

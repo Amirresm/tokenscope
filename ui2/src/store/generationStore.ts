@@ -99,14 +99,15 @@ const updateFimIndices = (index: number) => {
     }
 };
 
-const attentionTargetHead = signal<number>(0);
+const attentionTargetHead = signal<string | undefined>(undefined);
 const attentionTargetToken = signal<GenerationToken | null>(null);
 const attentionVisibleRange = signal<[number, number]>([0, 1]);
 
 function updateAttentionTargetToken(
-    attentionHead: number,
+    attentionHead: string | undefined,
     attentionToken: GenerationToken,
 ) {
+    if (!attentionHead) return;
     if (attentionToken) {
         const attentions = attentionToken.attentionSnapshot?.[attentionHead];
         if (attentions) {
@@ -130,7 +131,7 @@ function updateAttentionTargetToken(
     }
 }
 
-const setAttentionTargetHead = (head: number) => {
+const setAttentionTargetHead = (head: string) => {
     attentionTargetHead.value = head;
     if (attentionTargetToken.value) {
         updateAttentionTargetToken(head, attentionTargetToken.value);

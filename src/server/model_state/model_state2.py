@@ -6,8 +6,7 @@ import asyncio
 
 
 from src.ast_service.ast_service import ASTService
-from src.generator.gen_batch import BatchGenerator
-from src.generator.openai_generator import OpenAIGenerator
+from src.generator.client.gen_client import GenClient
 from src.generator.token_node import GenerationTree, Token, TokenNode
 from src.model.wrapper import (
     ControlTokenTypes,
@@ -47,12 +46,15 @@ class ModelState:
         #     topk=5,
         #     force_greedy=True,
         # )
-        available_models = OpenAIGenerator.get_available_models()
-        model_info = [m for m in available_models if "llama-3.1" in m["id"]][0]
-        self.batch_generator = OpenAIGenerator(
-            model_name=model_info["id"],
-            model_hf_id=model_info["hugging_face_id"],
-        )
+
+        # available_models = OpenAIGenerator.get_available_models()
+        # model_info = [m for m in available_models if "llama-3.1" in m["id"]][0]
+        # self.batch_generator = OpenAIGenerator(
+        #     model_name=model_info["id"],
+        #     model_hf_id=model_info["hugging_face_id"],
+        # )
+
+        self.batch_generator = GenClient()
 
         self.ast_service = ASTService()
 
@@ -228,7 +230,7 @@ class ModelState:
         print("Waiting for model lock ...")
         with self.generate_lock:
             print("Starting generation ...")
-            self.batch_generator.reset()
+            # self.batch_generator.reset()
             for batch in self.batch_generator.generate_yield(
                 prompt,
                 max_tokens=max_tokens,
@@ -303,7 +305,7 @@ class ModelState:
             self.branch_counter += 1
             print(f"branch_position: {branch_position}")
             if appended_prompt:
-                tokens, _, _ = self.batch_generator._prepare_prompts(
+                tokens = self.batch_generator.prompts_to_token(
                     [appended_prompt]
                 )
                 tokens = tokens[0]
@@ -348,7 +350,7 @@ class ModelState:
         print("Waiting for model lock ...")
         with self.generate_lock:
             print("Starting generation ...")
-            self.batch_generator.reset()
+            # self.batch_generator.reset()
             for batch in self.batch_generator.generate_yield(
                 "",  # ignored
                 prompts_tokens=prompt,

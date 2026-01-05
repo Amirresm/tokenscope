@@ -11,12 +11,13 @@ from transformers import AutoTokenizer
 
 from rich import print as rprint
 
-from src.generator.gen_batch import GeneratorItem
+from src.generator.generator import Generator
+from src.generator.server.transformers_generator import GeneratorItem
 from src.generator.token_node import Token
-from src.model.wrapper import ControlTokenTypes, ModelWrapper
+from src.model.wrapper import ControlTokenTypes
 
 
-class OpenAIGenerator:
+class OpenAIGenerator(Generator):
     @staticmethod
     def get_available_models():
         url = "https://openrouter.ai/api/v1/models"
@@ -30,6 +31,9 @@ class OpenAIGenerator:
             if "logprobs" in model.get("supported_parameters", []):
                 available_models.append(model)
 
+        available_models = [
+            {"id": m["id"], "metadata": m} for m in available_models
+        ]
         return available_models
 
     def __init__(
@@ -112,11 +116,14 @@ class OpenAIGenerator:
 
         start_time = time.time()
 
+        print(prompts_strings[0])
+
         results = self.client.completions.create(
             model=self.model_name,
             prompt=prompts_strings[0],
             max_tokens=remaining_token_count,
             n=1,
+            temperature=0.1,
             stream=True,
             logprobs=True,
             extra_body={
@@ -153,6 +160,7 @@ class OpenAIGenerator:
                         alternative_tokens=[],
                         token_types=[],
                     )
+                    print(token_string, end="")
                     for alt in t.get("top_logprobs", []):
                         alt_token_string = alt["token"]
                         alt_token_id = self.tokenizer.convert_tokens_to_ids(
@@ -196,6 +204,53 @@ class OpenAIGenerator:
         if log_metric:
             token_count = len(generation_results) * generation_step_count
             self._log_metrics(elapsed, token_count)
+
+    def prompts_to_token(self, prompts: list[str]):
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        tokenized = self.tokenizer(
+            prompts,
+            padding="longest",
+            max_length=512,
+            add_special_tokens=False,
+            return_tensors="pt",
+        )
+        input_ids: torch.Tensor = tokenized.input_ids
+
+        generation_results: list[list[Token]] = [
+            [] for _ in range(len(prompts))
+        ]
+
+        for j in range(input_ids.shape[1]):
+            tokens = self.tokenizer.batch_decode(input_ids[:, j])
+            for i in range(input_ids.shape[0]):
+                token_id = int(input_ids[i, j].item())
+                token = tokens[i]
+
+                tags = []
+
+                # TODO
+                # control_type = self.model.get_control_token_type(token)
+                # if control_type is not None:
+                #     tags.append("special")
+                #     if control_type == ControlTokenTypes.EOS:
+                #         tags.append(ControlTokenTypes.PAD.name.lower())
+                #     else:
+                #         tags.append(control_type.name.lower())
+
+                prompt_step_result = Token(
+                    position=j,
+                    token_string=token,
+                    token_id=token_id,
+                    confidence=1.0,
+                    alternative_tokens=[],
+                    token_types=tags,
+                )
+
+                generation_results[i].append(prompt_step_result)
+
+        return generation_results
 
     def _prepare_prompts(self, prompts: list[str]):
         tokenized = self.tokenizer(
