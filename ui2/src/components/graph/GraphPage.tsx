@@ -76,8 +76,8 @@ const getLayoutedElements = (
             .filter((n) => n.data.depth === node.data.depth - 1)
             .map((n) => (n.data.parentText + n.data.text).split("\n").length)
             .reduce((a, b) => Math.max(a, b), 0);
-        const lineHeight = 26;
-        const baseNodeHeight = 100;
+        const lineHeight = 24;
+        const baseNodeHeight = 80;
         const nodeHeight = baseNodeHeight + totalParentLines * lineHeight;
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
     });
@@ -95,8 +95,8 @@ const getLayoutedElements = (
             targetPosition: isHorizontal ? Position.Left : Position.Top,
             sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
-                // x: nodeWithPosition.x - nodeWithPosition.width / 2,
-                x: node.position.x * 1.1,
+                x: nodeWithPosition.x - nodeWithPosition.width / 2,
+                // x: node.position.x * 1.1,
                 // y: nodeWithPosition.y - nodeWithPosition.height / 2,
                 y: nodeWithPosition.y,
             },

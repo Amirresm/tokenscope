@@ -238,7 +238,6 @@ class ModelState:
                 record_attention=True,
             ):
                 step = batch[0]
-                print(step.token.token_string, end="")
                 if should_stop and await should_stop():
                     print("Stopping generation ...")
                     break
@@ -309,6 +308,8 @@ class ModelState:
                     [appended_prompt]
                 )
                 tokens = tokens[0]
+                for t in tokens:
+                    t.token_types.append("manual")
                 print(
                     f"Appending prompt tokens: {[t.token_string for t in tokens]}"
                 )

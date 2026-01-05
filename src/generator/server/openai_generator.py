@@ -152,13 +152,24 @@ class OpenAIGenerator(Generator):
                     )
                     logprobs = t["logprob"]
                     prob = np.exp(logprobs) if logprobs is not None else 0.0
+
+                    token_types = []
+                    if token_string in self.tokenizer.all_special_tokens:
+                        token_types.append("special")
+                        if token_string == self.tokenizer.eos_token:
+                            token_types.append("stop")
+                        if token_string == self.tokenizer.pad_token:
+                            token_types.append("pad")
+                        if token_string == self.tokenizer.bos_token:
+                            token_types.append("bos")
+
                     token = Token(
                         position=len(generation_results[0]),
                         token_string=token_string,
                         token_id=token_id,
                         confidence=prob,
                         alternative_tokens=[],
-                        token_types=[],
+                        token_types=token_types,
                     )
                     print(token_string, end="")
                     for alt in t.get("top_logprobs", []):
@@ -257,6 +268,7 @@ class OpenAIGenerator(Generator):
             prompts,
             # padding="longest",
             # max_length=512,
+            add_special_tokens=False,
             return_tensors="pt",
         )
         input_ids: torch.Tensor = tokenized.input_ids

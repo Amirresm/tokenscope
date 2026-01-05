@@ -53,6 +53,9 @@ const handleTokenGenerationStream = async (
                 sessionStore.sessionId.value = data.content.session_id;
             } else if (data.type === "token") {
                 handleData(generationTokenFromData(data.content));
+                if (sessionStore.branchId.value !== data.content.branch_id) {
+                    sessionStore.branchId.value = data.content.branch_id;
+                }
             } else {
                 console.warn(
                     "Unknown data type received at generation stream:",

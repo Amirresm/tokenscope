@@ -109,7 +109,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
         except Exception as e:
             rprint(f"Error: {e}")
-            break
+            raise e
 
 
 def create_app():

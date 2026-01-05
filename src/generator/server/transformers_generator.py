@@ -301,30 +301,17 @@ class BatchGenerator(Generator):
         for batch_index, result in enumerate(results):
             token_id, confidence, all_token_ids, all_confidences = result
             decoded_token = self.model.ids_to_str(token_id)
-            token_control_type = self.model.get_control_token_type(
-                decoded_token
-            )
 
-            tags = []
-            if token_control_type is not None:
-                tags.append("special")
-                tags.append(token_control_type.name.lower())
+            token_types = []
+            if decoded_token in self.model.t.all_special_tokens:
+                token_types.append("special")
+                if decoded_token == self.model.t.eos_token:
+                    token_types.append("stop")
+                if decoded_token == self.model.t.pad_token:
+                    token_types.append("pad")
+                if decoded_token == self.model.t.bos_token:
+                    token_types.append("bos")
 
-            # step_result = StepResult(
-            #     index=index,
-            #     token=decoded_token,
-            #     token_id=token_id,
-            #     confidence=confidence,
-            #     all_tokens_ids=all_token_ids,
-            #     all_tokens=[
-            #         self.model.ids_to_str(tok_id) for tok_id in all_token_ids
-            #     ],
-            #     all_confidences=all_confidences,
-            #     tags=tags,
-            #     attention_snapshot=(
-            #         attention_results[i] if attention_results else None
-            #     ),
-            # )
             attention_snapshot = (
                 attention_results[batch_index] if attention_results else None
             )
@@ -334,7 +321,7 @@ class BatchGenerator(Generator):
                 token_string=decoded_token,
                 token_id=token_id,
                 confidence=confidence,
-                token_types=tags,
+                token_types=token_types,
                 alternative_tokens=[
                     Token(
                         position=index,

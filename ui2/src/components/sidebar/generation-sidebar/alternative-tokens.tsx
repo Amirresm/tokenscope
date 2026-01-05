@@ -1,4 +1,4 @@
-import { Chart } from "react-charts";
+import { Chart, Datum } from "react-charts";
 import { GenerationToken } from "../../../models/generationToken";
 import React from "react";
 
@@ -51,7 +51,13 @@ export default function AlternativeTokens({
         [],
     );
 
-    console.log("Rendering AlternativeTokens with data:", data);
+    const handleClick = React.useCallback(
+        (datum: Datum<{ x: string; y: number }> | null) => {
+            console.log("Clicked datum:", datum);
+            if (datum) datum.originalDatum.x && onClick(datum.originalDatum.x);
+        },
+        [],
+    );
 
     return (
         <div>
@@ -65,6 +71,7 @@ export default function AlternativeTokens({
                         primaryAxis,
                         secondaryAxes,
                         dark: true,
+                        onClickDatum: handleClick,
                     }}
                 />
             </div>
