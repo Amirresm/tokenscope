@@ -184,16 +184,34 @@ export function Content({ token }: { token: GenerationToken }) {
                     </div>
                 ))}
             </div>
-            <div className="mt-4 flex items-center">
-                <div>{token.branchId}</div>
-                <div className="grow" />
-                <div>
-                    {token.perplexity === undefined
-                        ? "Not Calculated"
-                        : isNaN(token.perplexity)
-                          ? "N/A"
-                          : token.perplexity.toFixed(3)}
-                </div>
+            <div className="divider" />
+            <div className="overflow-x-auto">
+                <table className="table">
+                    <thead>
+                        <tr className="text-xs">
+                            <th>Branch</th>
+                            <th>Perplexity</th>
+                            <th>Std. Dev</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr className="text-xs">
+                            <td>{token.branchId}</td>
+                            <td className="text-center">
+                                {token.perplexity === undefined
+                                    ? "Not Calculated"
+                                    : isNaN(token.perplexity)
+                                      ? "N/A"
+                                      : token.perplexity.toFixed(3)}
+                            </td>
+                            <td className="text-center">
+                                {token.std === undefined
+                                    ? "Not Calculated"
+                                    : token.std.toFixed(3)}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div className="divider" />
             <div>

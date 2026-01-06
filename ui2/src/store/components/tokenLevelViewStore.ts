@@ -6,8 +6,36 @@ export enum ColorVerbosityEnum {
     NONE = "none",
 }
 
+export const TokenMetrics = {
+    confidence: { label: "Confidence" },
+    perplexity: { label: "Perplexity" },
+    std: { label: "Std. Deviation" },
+} as const;
+
+type TokenLevelViewConfigType = {
+    colorVerbosity: ColorVerbosityEnum;
+    specialTokenFilter: boolean;
+    showLineInfo: boolean;
+    tokenMetric: keyof typeof TokenMetrics;
+};
+
+const tokenLevelViewConfigSignal = signal<TokenLevelViewConfigType>({
+    colorVerbosity: ColorVerbosityEnum.NORMAL,
+    specialTokenFilter: true,
+    showLineInfo: false,
+    tokenMetric: "confidence",
+});
+
+function updateTokenLevelViewConfig(
+    newConfig: Partial<TokenLevelViewConfigType>,
+) {
+    tokenLevelViewConfigSignal.value = {
+        ...tokenLevelViewConfigSignal.value,
+        ...newConfig,
+    };
+}
+
 export default {
-    colorVerbosity: signal<ColorVerbosityEnum>(ColorVerbosityEnum.NORMAL),
-    specialTokenFilter: signal<boolean>(true),
-    showLineInfo: signal<boolean>(false),
+    config: tokenLevelViewConfigSignal,
+    updateConfig: updateTokenLevelViewConfig,
 };

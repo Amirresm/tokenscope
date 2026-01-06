@@ -6,7 +6,9 @@ import type { GenerationToken } from "../../models/generationToken";
 import drawerStore, {
     DrawerTabsEnum,
 } from "../../store/components/drawerStore";
-import tokenLevelViewStore from "../../store/components/tokenLevelViewStore";
+import tokenLevelViewStore, {
+    TokenMetrics,
+} from "../../store/components/tokenLevelViewStore";
 
 const defaultColorMap = {
     0: "text-base-content",
@@ -16,15 +18,15 @@ const normalColorMap = {
     0: "text-red-300",
     0.2: "text-orange-300",
     0.4: "text-yellow-300",
-    0.8: "",
+    0.6: "",
 };
 
 const verboseColorMap = {
     0: "text-red-300",
-    0.25: "text-orange-300",
-    0.5: "text-yellow-300",
-    0.75: "text-green-300",
-    0.98: "text-blue-300",
+    0.2: "text-orange-300",
+    0.4: "text-yellow-300",
+    0.6: "text-green-300",
+    0.8: "text-blue-300",
 };
 
 const attentionColorMap = {
@@ -45,6 +47,8 @@ function visualizeWhitespace(str: string) {
 type GenerationTokenProps = {
     generationToken: GenerationToken;
     colorVerbosity: "verbose" | "normal" | "none";
+    metric: "confidence" | "perplexity" | "std";
+    metricPercetiles: number[];
     showLineInfo?: boolean;
     isSelected?: boolean;
     isFimSelected?: boolean;
@@ -53,10 +57,12 @@ type GenerationTokenProps = {
     attentionVisibleRange?: number[];
 };
 
-const GenerationToken = React.memo((props: GenerationTokenProps) => {
+const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
     const {
         generationToken,
         colorVerbosity,
+        metric,
+        metricPercetiles,
         showLineInfo,
         isSelected,
         isFimSelected,
@@ -69,6 +75,8 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
         position,
         token,
         confidence,
+        perplexity,
+        std,
         tokenTypes,
         prompt,
         manual,
@@ -87,12 +95,21 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
         [generationToken],
     );
 
+    const metricValue = React.useMemo(() => {
+        if (metric === "confidence") return confidence;
+        if (metric === "perplexity") return perplexity || -1;
+        if (metric === "std") return std || -1;
+        return -1;
+    }, [metric, confidence, perplexity, std]);
+
     const textColor = React.useMemo(() => {
-        if (prompt) return "text-gray-400";
-        if (manual) {
+        if (metricValue === -1) return "text-gray-400";
+        if (prompt && metric !== "perplexity") return "text-gray-400";
+        if (manual && metric !== "perplexity") {
             if (tokenTypes.includes("prefix")) return "text-stone-400";
             return "text-gray-400";
         }
+        const reversed = metric !== "perplexity" ? false : true;
 
         const colorMap =
             colorVerbosity === "verbose"
@@ -100,17 +117,31 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
                 : colorVerbosity === "normal"
                   ? normalColorMap
                   : defaultColorMap;
+
+        let currentPercentile: number;
+        if (reversed) {
+            const reversedPercentiles = [...metricPercetiles].reverse();
+            currentPercentile =
+                reversedPercentiles.findIndex((perc) => metricValue >= perc) *
+                (100 / metricPercetiles.length);
+        } else {
+            currentPercentile =
+                metricPercetiles.findIndex((perc) => metricValue <= perc) *
+                (100 / metricPercetiles.length);
+        }
+
         const textColor = Object.entries(colorMap).reduce(
             (acc, [threshold, color]) => {
-                if (confidence >= parseFloat(threshold)) {
+                if (currentPercentile / 100 >= parseFloat(threshold)) {
                     return color;
                 }
                 return acc;
             },
             "",
         );
+
         return textColor;
-    }, [prompt, manual, colorVerbosity, tokenTypes, confidence]);
+    }, [prompt, manual, colorVerbosity, tokenTypes, metricValue]);
 
     const startOfLineMarkerColor = React.useMemo(() => {
         if (lineConfidence === undefined) return "";
@@ -200,7 +231,7 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
                 )}
                 <div
                     className="tooltip inline"
-                    data-tip={`Confidence: ${confidence.toFixed(2)}`}
+                    data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(3)}`}
                 >
                     {isSelected ? visualizeWhitespace(token) : token}
                 </div>
@@ -223,12 +254,14 @@ const GenerationToken = React.memo((props: GenerationTokenProps) => {
 type GenerationListProps = {
     generationList: GenerationToken[];
     colorVerbosity: "verbose" | "normal" | "none";
+    metric: "confidence" | "perplexity" | "std";
+    metricPercetiles: number[];
     showLineInfo?: boolean;
     selectedTokenIndex?: number;
     fimStartTokenIndex: number | null;
     fimEndTokenIndex: number | null;
     attentionTargetTokenIndex?: number;
-    attentionTargetHead?: number;
+    attentionTargetHead?: string;
     attentionVisibleRange?: number[];
     specialTokenFilter?: boolean;
 };
@@ -237,6 +270,8 @@ const GenerationList = React.memo((props: GenerationListProps) => {
     const {
         generationList,
         colorVerbosity,
+        metric,
+        metricPercetiles,
         showLineInfo,
         selectedTokenIndex,
         fimStartTokenIndex,
@@ -252,7 +287,7 @@ const GenerationList = React.memo((props: GenerationListProps) => {
             specialTokenFilter ? !token.tokenTypes.includes("special") : true,
         )
         .map((token) => (
-            <GenerationToken
+            <GenerationTokenComponent
                 key={
                     token.position +
                     "-" +
@@ -264,6 +299,8 @@ const GenerationList = React.memo((props: GenerationListProps) => {
                 }
                 generationToken={token}
                 colorVerbosity={colorVerbosity}
+                metric={metric}
+                metricPercetiles={metricPercetiles}
                 showLineInfo={showLineInfo}
                 isSelected={selectedTokenIndex === token.position}
                 isFimSelected={
@@ -290,9 +327,20 @@ const GenerationList = React.memo((props: GenerationListProps) => {
 const GenerationView = () => {
     const bottomRef = React.useRef<HTMLSpanElement>(null);
 
-    const colorVerbosity = tokenLevelViewStore.colorVerbosity.value;
-    const showLineInfo = tokenLevelViewStore.showLineInfo.value;
-    const specialTokenFilter = tokenLevelViewStore.specialTokenFilter.value;
+    const colorVerbosity = tokenLevelViewStore.config.value.colorVerbosity;
+    const metric = tokenLevelViewStore.config.value.tokenMetric;
+    const showLineInfo = tokenLevelViewStore.config.value.showLineInfo;
+    const specialTokenFilter =
+        tokenLevelViewStore.config.value.specialTokenFilter;
+
+    const metricPercetiles =
+        metric === "confidence"
+            ? generationStore.confidenceTenPercentiles.value
+            : metric === "perplexity"
+              ? generationStore.perplexityTenPercentiles.value
+              : generationStore.stdevTenPercentiles.value;
+
+    console.log(metricPercetiles);
 
     const generationList = generationStore.currentGeneration.value;
     const selectedToken = generationStore.selectedToken.value;
@@ -318,8 +366,10 @@ const GenerationView = () => {
                 <GenerationList
                     generationList={generationList}
                     colorVerbosity={colorVerbosity}
+                    metric={metric}
                     showLineInfo={showLineInfo}
                     selectedTokenIndex={selectedToken?.position}
+                    metricPercetiles={metricPercetiles}
                     fimStartTokenIndex={fimStartToken}
                     fimEndTokenIndex={fimEndToken}
                     attentionTargetTokenIndex={attentionTargetToken?.position}

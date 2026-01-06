@@ -5,6 +5,7 @@ import {
 } from "../models/generationToken";
 import generationStore from "../store/generationStore";
 import sessionStore from "../store/sessionStore";
+import { calcPercentile } from "../utils/calcPercentile";
 import { API_BASE_URL } from "./constants";
 
 type TokenGenerationData =
@@ -80,6 +81,84 @@ const handleTokenGenerationStream = async (
             generationStore.attentionTargetToken.value,
         );
     }
+
+    // get min max for metrics
+    const confidenceDomain = [Infinity, -Infinity];
+    const perplexityDomain = [Infinity, -Infinity];
+    const stdevDomain = [Infinity, -Infinity];
+
+    for (const token of generationStore.currentGeneration.value) {
+        if (token.confidence !== undefined && token.confidence >= 0) {
+            confidenceDomain[0] = Math.min(
+                confidenceDomain[0],
+                token.confidence,
+            );
+            confidenceDomain[1] = Math.max(
+                confidenceDomain[1],
+                token.confidence,
+            );
+        }
+        if (token.perplexity !== undefined && !isNaN(token.perplexity)) {
+            perplexityDomain[0] = Math.min(
+                perplexityDomain[0],
+                token.perplexity,
+            );
+            perplexityDomain[1] = Math.max(
+                perplexityDomain[1],
+                token.perplexity,
+            );
+        }
+        if (token.std !== undefined) {
+            stdevDomain[0] = Math.min(stdevDomain[0], token.std);
+            stdevDomain[1] = Math.max(stdevDomain[1], token.std);
+        }
+    }
+
+    // get percentiles for metrics
+    const confidencePercentiles: number[] = [];
+    const perplexityPercentiles: number[] = [];
+    const stdevPercentiles: number[] = [];
+
+    for (let p = 0; p < 100; p += 20) {
+        const confPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) => (t.confidence !== undefined ? t.confidence : 0),
+            p,
+        );
+        if (confPerc !== null) {
+            confidencePercentiles.push(confPerc);
+        }
+        const perpPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) => (t.perplexity !== undefined ? t.perplexity : Infinity),
+            p,
+        );
+        if (perpPerc !== null) {
+            perplexityPercentiles.push(perpPerc);
+        }
+        const stdPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) => (t.std !== undefined ? t.std : 0),
+            p,
+        );
+        if (stdPerc !== null) {
+            stdevPercentiles.push(stdPerc);
+        }
+    }
+    generationStore.confidenceTenPercentiles.value = confidencePercentiles;
+    generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
+    generationStore.stdevTenPercentiles.value = stdevPercentiles;
+
+    generationStore.confidenceDomain.value = [
+        confidenceDomain[0],
+        confidenceDomain[1],
+    ];
+    generationStore.perplexityDomain.value = [
+        perplexityDomain[0],
+        perplexityDomain[1],
+    ];
+    generationStore.stdevDomain.value = [stdevDomain[0], stdevDomain[1]];
+
     console.log("Stream finished");
     return;
 };

@@ -1,13 +1,14 @@
 import React from "react";
 import DynamicTextarea from "./DynamicTextarea";
 import generationStore from "../store/generationStore";
-import { PaintBucketIcon } from "@phosphor-icons/react";
+import { GearIcon, PaintBucketIcon } from "@phosphor-icons/react";
 import sessionStore from "../store/sessionStore";
 import globalStore from "../store/components/globalStore";
 import { continueGeneration, generateNew } from "../api/generationAPI";
 import tokenLevelViewStore, {
     ColorVerbosityEnum,
 } from "../store/components/tokenLevelViewStore";
+import { TokenLevelConfigDropdown } from "./TokenLevelConfigDropdown";
 
 export function PromptInput() {
     const sessionId = sessionStore.sessionId.value;
@@ -93,7 +94,9 @@ export function PromptInput() {
         (option: ColorVerbosityEnum) => () => {
             const activeElement = document.activeElement as HTMLElement;
             activeElement?.blur();
-            tokenLevelViewStore.colorVerbosity.value = option;
+            tokenLevelViewStore.updateConfig({
+                colorVerbosity: option,
+            });
         },
         [],
     );
@@ -119,22 +122,16 @@ export function PromptInput() {
             />
             <div className="flex gap-2 mt-4 items-center">
                 <div className="dropdown">
-                    <div tabIndex={0} role="button" className="btn m-1">
-                        <PaintBucketIcon />
-                    </div>
-                    <ul
-                        tabIndex={0}
-                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                    <button
+                        className="btn"
+                        popoverTarget="popover-1"
+                        style={{
+                            anchorName: "--anchor-1",
+                        }}
                     >
-                        {colorVerbosityOptions.map((option) => (
-                            <li
-                                key={option}
-                                onClick={handleChangeColorVerbosity(option)}
-                            >
-                                <a>{option}</a>
-                            </li>
-                        ))}
-                    </ul>
+                        <GearIcon />
+                    </button>
+                    <TokenLevelConfigDropdown />
                 </div>
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn m-1">
@@ -155,32 +152,6 @@ export function PromptInput() {
                         </li>
                     </ul>
                 </div>
-                <button
-                    className={`btn btn-ghost ${
-                        !tokenLevelViewStore.specialTokenFilter.value
-                            ? "btn-active"
-                            : ""
-                    }`}
-                    onClick={() => {
-                        tokenLevelViewStore.specialTokenFilter.value =
-                            !tokenLevelViewStore.specialTokenFilter.value;
-                    }}
-                >
-                    Show Special
-                </button>
-                <button
-                    className={`btn btn-ghost ${
-                        tokenLevelViewStore.showLineInfo.value
-                            ? "btn-active"
-                            : ""
-                    }`}
-                    onClick={() => {
-                        tokenLevelViewStore.showLineInfo.value =
-                            !tokenLevelViewStore.showLineInfo.value;
-                    }}
-                >
-                    Show Line Info
-                </button>
                 <div className="grow" />
                 <label className="input w-40">
                     <span className="text-gray-500">Attention Layer</span>

@@ -1,6 +1,24 @@
 type AttentionSnapshotData = Record<string, [string, string][]>;
 type AttentionSnapshot = Record<string, { index: number; attention: number }[]>;
 
+function calculateStandardDeviation(values: number[]): number {
+    const mean =
+        values.reduce(
+            (accumulator, currentValue) => accumulator + currentValue,
+            0,
+        ) / values.length;
+    const squaredDifferences = values.map((value) => {
+        const difference = value - mean;
+        return difference * difference;
+    });
+    const variance =
+        squaredDifferences.reduce(
+            (accumulator, currentValue) => accumulator + currentValue,
+            0,
+        ) / values.length;
+    return Math.sqrt(variance);
+}
+
 export type GenerationTokenData = {
     token_string: string;
     token_id: number;
@@ -17,8 +35,11 @@ export type GenerationTokenData = {
 export type GenerationToken = {
     token: string;
     tokenId: number;
+
     confidence: number;
     perplexity?: number;
+    std?: number;
+
     position: number;
     tokenTypes: string[];
     alternativeTokens?: GenerationToken[];
@@ -55,6 +76,13 @@ export function generationTokenFromData(
         ? data.alternative_tokens.map((token) => generationTokenFromData(token))
         : [];
     alternativeTokens.forEach((token) => (token.position = data.position));
+    const std = alternativeTokens.length
+        ? calculateStandardDeviation(
+              alternativeTokens.map((t) =>
+                  typeof t.confidence === "number" ? t.confidence : 0,
+              ),
+          )
+        : undefined;
 
     return {
         token: data.token_string,
@@ -64,6 +92,7 @@ export function generationTokenFromData(
                 ? parseFloat(data.confidence)
                 : data.confidence,
         perplexity: data.perplexity ? parseFloat(data.perplexity) : undefined,
+        std: std,
         position: data.position,
         tokenTypes: tokenTypes,
         branchId: data.branch_id,

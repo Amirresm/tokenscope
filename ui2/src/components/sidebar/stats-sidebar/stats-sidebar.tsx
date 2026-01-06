@@ -107,7 +107,7 @@ export default function StatsSidebar() {
             <div className="card w-full bg-base-100 grow">
                 <div className="card-body">
                     <h2 className="card-title">Stats</h2>
-                    <div className="flex flex-col gap-1">
+                    <div className="stats stats-vertical shadow">
                         <div className="stat">
                             <div className="stat-title">Generated Tokens</div>
                             <div className="stat-value">

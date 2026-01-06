@@ -161,6 +161,13 @@ export default {
     previousToken,
     lastGeneratedToken,
 
+    confidenceDomain: signal<[number, number]>([-1, 1]),
+    perplexityDomain: signal<[number, number]>([-1, Infinity]),
+    stdevDomain: signal<[number, number]>([-1, Infinity]),
+    confidenceTenPercentiles: signal<number[]>([]),
+    perplexityTenPercentiles: signal<number[]>([]),
+    stdevTenPercentiles: signal<number[]>([]),
+
     attentionTargetToken,
     attentionTargetHead,
     attentionVisibleRange,
