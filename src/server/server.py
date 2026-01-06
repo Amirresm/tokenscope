@@ -12,7 +12,7 @@ from src.server.model_state.model_state2 import ModelState
 
 router = fastapi.APIRouter()
 
-GEN_URL = "http://localhost:3001/gen"
+GEN_URL = "http://localhost:4001/gen"
 
 
 @router.get("/current_model")

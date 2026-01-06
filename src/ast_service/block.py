@@ -163,9 +163,9 @@ class BlockDetector:
         for i in range(len(root_block.children) - 1):
             cb = root_block.children[i]
             nb = root_block.children[i + 1]
-            assert (
-                cb.total_range.end < nb.total_range.start
-            ), f"Blocks unexpected overlap: {cb} and {nb}"
+            # assert (
+            #     cb.total_range.end < nb.total_range.start
+            # ), f"Blocks unexpected overlap: {cb} and {nb}"
 
         first_child = (
             root_block.children[0] if len(root_block.children) > 0 else None

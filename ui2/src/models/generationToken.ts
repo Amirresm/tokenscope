@@ -4,7 +4,8 @@ type AttentionSnapshot = Record<string, { index: number; attention: number }[]>;
 export type GenerationTokenData = {
     token_string: string;
     token_id: number;
-    confidence: number;
+    confidence: string;
+    perplexity?: string;
     position: number;
     token_types: string[];
     alternative_tokens?: GenerationTokenData[];
@@ -17,6 +18,7 @@ export type GenerationToken = {
     token: string;
     tokenId: number;
     confidence: number;
+    perplexity?: number;
     position: number;
     tokenTypes: string[];
     alternativeTokens?: GenerationToken[];
@@ -48,6 +50,11 @@ export function generationTokenFromData(
             );
         }
     }
+    const tokenTypes = data.token_types || [];
+    const alternativeTokens = data.alternative_tokens
+        ? data.alternative_tokens.map((token) => generationTokenFromData(token))
+        : [];
+    alternativeTokens.forEach((token) => (token.position = data.position));
 
     return {
         token: data.token_string,
@@ -56,18 +63,15 @@ export function generationTokenFromData(
             typeof data.confidence === "string"
                 ? parseFloat(data.confidence)
                 : data.confidence,
+        perplexity: data.perplexity ? parseFloat(data.perplexity) : undefined,
         position: data.position,
-        tokenTypes: data.token_types,
+        tokenTypes: tokenTypes,
         branchId: data.branch_id,
-        alternativeTokens: data.alternative_tokens
-            ? data.alternative_tokens.map((token) =>
-                  generationTokenFromData(token),
-              )
-            : undefined,
+        alternativeTokens: alternativeTokens,
         attentionSnapshot: attentionSnapshot,
-        stop: data.token_types.includes("stop"),
-        prompt: data.token_types.includes("prompt"),
-        manual: data.token_types.includes("manual"),
+        stop: tokenTypes.includes("stop"),
+        prompt: tokenTypes.includes("prompt"),
+        manual: tokenTypes.includes("manual"),
     };
 }
 

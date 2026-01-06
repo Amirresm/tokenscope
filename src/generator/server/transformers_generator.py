@@ -150,7 +150,7 @@ class BatchGenerator(Generator):
 
         self.model.t.padding_side = old_padding_side
 
-    def prompts_to_token(self, prompts: list[str]):
+    def prompts_to_token(self, prompts: list[str], calc_perplexity=True):
         tokenized = self.model.t(
             prompts,
             padding="longest",
@@ -179,11 +179,20 @@ class BatchGenerator(Generator):
                     else:
                         tags.append(control_type.name.lower())
 
+                perplexity = None
+                if calc_perplexity:
+                    single_input_ids = input_ids[i : i + 1, : j + 1]
+                    perplexity = self._call_model_and_calculate_perplexity(
+                        single_input_ids,
+                        torch.ones_like(single_input_ids),
+                    )
+
                 prompt_step_result = Token(
                     position=j,
                     token_string=token,
                     token_id=token_id,
                     confidence=1.0,
+                    perplexity=perplexity,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -192,7 +201,7 @@ class BatchGenerator(Generator):
 
         return generation_results
 
-    def _prepare_prompts(self, prompts: list[str]):
+    def _prepare_prompts(self, prompts: list[str], calc_perplexity=True):
         tokenized = self.model.t(
             prompts,
             padding="longest",
@@ -221,11 +230,20 @@ class BatchGenerator(Generator):
                     else:
                         tags.append(control_type.name.lower())
 
+                perplexity = None
+                if calc_perplexity:
+                    single_input_ids = input_ids[i : i + 1, : j + 1]
+                    single_attention_mask = attention_mask[i : i + 1, : j + 1]
+                    perplexity = self._call_model_and_calculate_perplexity(
+                        single_input_ids, single_attention_mask
+                    )
+
                 prompt_step_result = Token(
                     position=j,
                     token_string=token,
                     token_id=token_id,
                     confidence=1.0,
+                    perplexity=perplexity,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -270,6 +288,9 @@ class BatchGenerator(Generator):
                 use_cache=True,
             )
         logits = output.logits
+        perplexity = self._calculate_perplexity(
+            logits, input_ids, attention_mask
+        )
 
         results, new_ids = self._process_logits(
             logits, batch_size, topn=self.topk, coeff=1
@@ -321,13 +342,15 @@ class BatchGenerator(Generator):
                 token_string=decoded_token,
                 token_id=token_id,
                 confidence=confidence,
+                perplexity=perplexity,
                 token_types=token_types,
                 alternative_tokens=[
                     Token(
-                        position=index,
+                        position=-1,
                         token_string=self.model.ids_to_str(tok_id),
                         token_id=tok_id,
                         confidence=conf,
+                        perplexity=None,
                         token_types=[],
                     )
                     for tok_id, conf in zip(all_token_ids, all_confidences)
@@ -338,6 +361,54 @@ class BatchGenerator(Generator):
             step_tokens.append((step_result, should_stop))
 
         return step_tokens, input_ids, attention_mask, output.past_key_values
+
+    def _calculate_perplexity(
+        self, logits, target_ids, attention_mask
+    ) -> float:
+        shift_logits = logits[:, :-1, :].contiguous()
+        shift_labels = target_ids[:, 1:].contiguous()
+        shift_attention_mask = attention_mask[:, 1:].contiguous()
+
+        if (
+            self.model.t.pad_token is not None
+            and type(self.model.t.pad_token) == str
+        ):
+            pad_token_id = int(self.model.t.pad_token_id)
+        else:
+            pad_token_id = -100
+
+        loss_fct = torch.nn.CrossEntropyLoss(
+            reduction="none", ignore_index=pad_token_id
+        )
+        loss = loss_fct(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_labels.view(-1),
+        )
+        loss = loss.view(shift_labels.size())
+
+        masked_loss = loss * shift_attention_mask
+        sum_loss = masked_loss.sum(dim=1)
+        lengths = shift_attention_mask.sum(dim=1)
+
+        perplexities = torch.exp(sum_loss / lengths)
+        return float(perplexities.detach().cpu().to(torch.float32).mean().item())
+
+    def _call_model_and_calculate_perplexity(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+    ) -> float:
+        with torch.no_grad():
+            output = self.model.m(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+            )
+            logits = output.logits
+
+        perplexity = self._calculate_perplexity(
+            logits, input_ids, attention_mask
+        )
+        return perplexity
 
     def _process_logits(
         self,

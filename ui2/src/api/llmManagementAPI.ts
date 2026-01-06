@@ -14,8 +14,8 @@ export async function fetchCurrentModel() {
         }
         const data = await response.json();
 
-        const source = data.model_source;
-        const modelNameOrPath = data.current_model;
+        const source = data.model_source as string;
+        const modelNameOrPath = data.current_model as string;
 
         return { source, modelNameOrPath };
     } catch (error) {

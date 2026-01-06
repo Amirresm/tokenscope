@@ -99,7 +99,7 @@ class ModelState:
 
         print("Prefilling generation ...")
         for token_node in session.generation_tree.get_token_list(branch_id):
-            token_dict = token_node.to_dict()
+            token_dict = token_node.to_dict_minify()
             data = {
                 "type": "token",
                 "content": token_dict,
@@ -154,7 +154,7 @@ class ModelState:
 
         tokens_json = [
             {
-                "token": t.token,
+                "token": t.token.to_dict_minify(),
                 "match": t.prominent_match,
                 "block_id": t.block.id if t.block else None,
                 "block_type": t.block.type if t.block else None,
@@ -247,7 +247,7 @@ class ModelState:
                 )
                 session.generation_tree.add_token(token_node)
 
-                token_dict = token_node.to_dict()
+                token_dict = token_node.to_dict_minify()
                 data = {
                     "type": "token",
                     "content": token_dict,
@@ -256,7 +256,7 @@ class ModelState:
                 data.replace("\n", "\\n")
                 data += "\n"
                 yield data
-                await asyncio.sleep(0)
+                await asyncio.sleep(0.0)
                 if step.stop:
                     print("Reaching end...")
                     break
@@ -335,7 +335,7 @@ class ModelState:
                 prompt = prompt[:branch_position]
 
         for token_node in prompt:
-            token_dict = token_node.to_dict()
+            token_dict = token_node.to_dict_minify()
             data = {
                 "type": "token",
                 "content": token_dict,
@@ -380,7 +380,7 @@ class ModelState:
                 else:
                     session.generation_tree.add_token(token_node)
 
-                token_dict = token_node.to_dict()
+                token_dict = token_node.to_dict_minify()
                 data = {
                     "type": "token",
                     "content": token_dict,

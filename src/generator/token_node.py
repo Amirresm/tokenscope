@@ -17,6 +17,7 @@ class Token:
     token_string: str
     token_id: int
     confidence: float
+    perplexity: float | None
     position: int  # or depth
 
     # token_types: set[TokenType]
@@ -29,6 +30,7 @@ class Token:
             "token_string": self.token_string,
             "token_id": self.token_id,
             "confidence": self.confidence,
+            "perplexity": self.perplexity,
             "position": self.position,
             "token_types": [t for t in self.token_types],
             "alternative_tokens": [
@@ -38,6 +40,34 @@ class Token:
         }
         return data
 
+    def to_dict_minify(self) -> dict:
+        attention_snapshot = (
+            {
+                k: [(p[0], f"{p[1]:.4f}") for p in v]
+                for k, v in self.attention_snapshot.items()
+            }
+            if self.attention_snapshot
+            else None
+        )
+        data = {
+            "token_string": self.token_string,
+            "token_id": self.token_id,
+            "confidence": f"{self.confidence:.6f}",
+            "perplexity": (
+                f"{self.perplexity:.6f}"
+                if self.perplexity is not None
+                else None
+            ),
+            "position": self.position if self.position != -1 else None,
+            "token_types": self.token_types,
+            "alternative_tokens": [
+                alt_token.to_dict() for alt_token in self.alternative_tokens
+            ],
+            "attention_snapshot": attention_snapshot,
+        }
+        data = {k: v for k, v in data.items() if v != [] and v is not None}
+        return data
+
     @staticmethod
     def from_dict(data: dict) -> "Token":
         alternative_tokens = [
@@ -45,7 +75,10 @@ class Token:
             for alt_token_data in data.get("alternative_tokens", [])
         ]
         attention_snapshot: dict[str, list[tuple[int, float]]] | None = None
-        if "attention_snapshot" in data and data["attention_snapshot"] is not None:
+        if (
+            "attention_snapshot" in data
+            and data["attention_snapshot"] is not None
+        ):
             attention_snapshot = {}
             for key, value in data["attention_snapshot"].items():
                 attention_snapshot[key] = []
@@ -56,6 +89,7 @@ class Token:
             token_string=data["token_string"],
             token_id=data["token_id"],
             confidence=data["confidence"],
+            perplexity=data.get("perplexity", None),
             position=data["position"],
             token_types=data.get("token_types", []),
             alternative_tokens=alternative_tokens,
@@ -75,6 +109,12 @@ class TokenNode:
 
     def to_dict(self) -> dict:
         token_data = self.token.to_dict()
+        token_data["branch_id"] = self.branch_id
+
+        return token_data
+
+    def to_dict_minify(self) -> dict:
+        token_data = self.token.to_dict_minify()
         token_data["branch_id"] = self.branch_id
 
         return token_data

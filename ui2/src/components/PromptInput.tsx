@@ -151,7 +151,7 @@ export function PromptInput() {
                             <a>Graph View</a>
                         </li>
                         <li onClick={handleChangeViewMode("ast")}>
-                            <a>AST View</a>
+                            <a>Code Analysis View</a>
                         </li>
                     </ul>
                 </div>

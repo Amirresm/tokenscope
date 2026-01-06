@@ -3,7 +3,6 @@ import sessionStore from "../../store/sessionStore";
 import { fetchASTData } from "../../api/astAPI";
 import React from "react";
 import generationStore from "../../store/generationStore";
-import { BlockView } from "./BlockView";
 import { GenericAstView } from "./GenericAstView";
 import astStore from "../../store/components/astStore";
 
@@ -34,7 +33,10 @@ function RangeSelector({ source, onSelectRange }: RangeSelectorProps) {
     );
 
     return (
-        <pre onMouseUp={handleMouseUp} className="whitespace-pre-wrap">
+        <pre
+            onMouseUp={handleMouseUp}
+            className="whitespace-pre-wrap p-4 selection:bg-primary/30"
+        >
             {source}
         </pre>
     );
@@ -44,10 +46,10 @@ export enum ViewModesEnum {
     Type = "type",
     Category = "category",
     Group = "group",
-    Block = "block",
+    // Block = "block",
     LineNumber = "lineNumber",
-    AtomicBlock = "atomicBlock",
-    AtomicBlock2 = "atomicBlock2",
+    // AtomicBlock = "atomicBlock",
+    AtomicBlock2 = "atomicBlock",
 }
 
 export function AstPage() {
@@ -131,15 +133,25 @@ export function AstPage() {
                         ))}
                     </ul>
                 </div>
+                <button
+                    className="btn btn-ghost m-1"
+                    onClick={() => (astStore.selectedRange.value = null)}
+                >
+                    Clear Range Selection
+                </button>
             </div>
-            {viewMode === ViewModesEnum.AtomicBlock ? (
-                <BlockView atomicBlocks={astDataQuery.data.atomicBlocks} />
-            ) : (
-                <GenericAstView
-                    astTokens={astDataQuery.data.astTokens}
-                    groupingMode={viewMode}
-                />
-            )}
+            <GenericAstView
+                astTokens={astDataQuery.data.astTokens}
+                groupingMode={viewMode}
+            />
+            {/* {viewMode === ViewModesEnum.AtomicBlock ? ( */}
+            {/*     <BlockView atomicBlocks={astDataQuery.data.atomicBlocks} /> */}
+            {/* ) : ( */}
+            {/*     <GenericAstView */}
+            {/*         astTokens={astDataQuery.data.astTokens} */}
+            {/*         groupingMode={viewMode} */}
+            {/*     /> */}
+            {/* )} */}
         </div>
     );
 }

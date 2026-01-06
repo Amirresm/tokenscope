@@ -184,7 +184,8 @@ class OpenAIGenerator(Generator):
                             else 0.0
                         )
                         alt_token = Token(
-                            position=len(generation_results[0]),
+                            # position=len(generation_results[0]),
+                            position=-1,
                             token_string=alt_token_string,
                             token_id=alt_token_id,
                             confidence=alt_prob,

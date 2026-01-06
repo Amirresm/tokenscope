@@ -11,7 +11,7 @@ from src.generator.token_node import Token
 
 class GenClient(Generator):
     def __init__(self):
-        self.url = "ws://localhost:3001/gen/ws"
+        self.url = "ws://localhost:4001/gen/ws"
 
     def generate_yield(
         self,
@@ -62,7 +62,7 @@ class GenClient(Generator):
                     break
 
     def prompts_to_token(self, prompts: list[str]) -> list[list[Token]]:
-        url = "http://localhost:3001/gen/prompts_to_tokens"
+        url = "http://localhost:4001/gen/prompts_to_tokens"
         payload = {"prompts": prompts}
         response = requests.post(url, json=payload)
         response_data = response.json()

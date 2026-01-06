@@ -7,7 +7,7 @@ import generationStore from "../store/generationStore";
 import sessionStore from "../store/sessionStore";
 import { API_BASE_URL } from "./constants";
 
-type TojenGenerationData =
+type TokenGenerationData =
     | {
           type: "token";
           content: GenerationTokenData;
@@ -28,41 +28,49 @@ const handleTokenGenerationStream = async (
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = "";
+
     while (true) {
         const { done, value } = await reader.read();
         if (done) {
             break;
         }
 
-        const textList = decoder.decode(value).split("\n");
-        textList.forEach((text) => {
-            if (text === "") {
-                return;
-            }
-            let data: TojenGenerationData;
-            try {
-                data = JSON.parse(text);
-            } catch (error) {
-                console.log("Error:", error);
-                console.log("Text:", text);
-                return;
+        buffer += decoder.decode(value, { stream: true });
+        let newLineIndex;
+
+        while ((newLineIndex = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, newLineIndex);
+            buffer = buffer.slice(newLineIndex + 1);
+            if (line === "") {
+                continue;
             }
 
-            if (data.type === "session_info") {
-                sessionStore.branchId.value = data.content.branch_id;
-                sessionStore.sessionId.value = data.content.session_id;
-            } else if (data.type === "token") {
-                handleData(generationTokenFromData(data.content));
-                if (sessionStore.branchId.value !== data.content.branch_id) {
+            let data: TokenGenerationData;
+            try {
+                data = JSON.parse(line);
+                if (data.type === "session_info") {
                     sessionStore.branchId.value = data.content.branch_id;
+                    sessionStore.sessionId.value = data.content.session_id;
+                } else if (data.type === "token") {
+                    handleData(generationTokenFromData(data.content));
+                    if (
+                        sessionStore.branchId.value !== data.content.branch_id
+                    ) {
+                        sessionStore.branchId.value = data.content.branch_id;
+                    }
+                } else {
+                    console.warn(
+                        "Unknown data type received at generation stream:",
+                        data,
+                    );
                 }
-            } else {
-                console.warn(
-                    "Unknown data type received at generation stream:",
-                    data,
-                );
+            } catch (error) {
+                console.log("Error:", error);
+                console.log("Line:", line);
+                return;
             }
-        });
+        }
     }
     reader.releaseLock();
     onComplete?.();

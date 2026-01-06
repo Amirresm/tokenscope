@@ -22,9 +22,13 @@ export default function AlternativeTokens({
         () => [
             {
                 label: "Tokens",
-                data: alternativeTokens.map((t, index) => ({
-                    x: visualizeWhitespace(t.token),
+                data: alternativeTokens.map((t) => ({
+                    x: {
+                        text: visualizeWhitespace(t.token),
+                        original: t.token,
+                    },
                     y: t.confidence,
+                    sampledToken: token.tokenId === t.tokenId,
                 })),
             },
         ],
@@ -33,7 +37,7 @@ export default function AlternativeTokens({
 
     const primaryAxis = React.useMemo(
         () => ({
-            getValue: (datum: any) => datum.x,
+            getValue: (datum: any) => datum.x.text,
             scaleType: "band" as const,
         }),
         [],
@@ -52,9 +56,16 @@ export default function AlternativeTokens({
     );
 
     const handleClick = React.useCallback(
-        (datum: Datum<{ x: string; y: number }> | null) => {
+        (
+            datum: Datum<{
+                x: { text: string; original: string };
+                y: number;
+            }> | null,
+        ) => {
             console.log("Clicked datum:", datum);
-            if (datum) datum.originalDatum.x && onClick(datum.originalDatum.x);
+            if (datum)
+                datum.originalDatum.x &&
+                    onClick(datum.originalDatum.x.original);
         },
         [],
     );
@@ -72,6 +83,13 @@ export default function AlternativeTokens({
                         secondaryAxes,
                         dark: true,
                         onClickDatum: handleClick,
+                        getDatumStyle: (datum, status) => {
+                            return {
+                                fill: datum.originalDatum.sampledToken
+                                    ? "#009979"
+                                    : "#3b82f6",
+                            };
+                        },
                     }}
                 />
             </div>

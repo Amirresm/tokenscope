@@ -13,13 +13,13 @@ def main():
 
         app = create_app()
         # uvicorn.run(app, host="0.0.0.0", port=3000)
-        uvicorn.run(app, host="0.0.0.0", port=3000, workers=1, loop="asyncio")
+        uvicorn.run(app, host="0.0.0.0", port=4000, workers=1, loop="asyncio")
     elif args.g:
         import uvicorn
         from src.generator.server.gen_server import create_app
 
         app = create_app()
-        uvicorn.run(app, host="0.0.0.0", port=3001, workers=1, loop="asyncio")
+        uvicorn.run(app, host="0.0.0.0", port=4001, workers=1, loop="asyncio")
     else:
         print("Please specify either 'server' or 'gen' as an argument.")
 

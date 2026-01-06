@@ -14,11 +14,37 @@ function visualizeWhitespace(str: string) {
     // .replace(/\n/g, "⏎\n") // newline
 }
 
+const verboseColorMap = {
+    0: "text-red-500",
+    0.1: "text-orange-500",
+    0.2: "text-red-300",
+    0.35: "text-yellow-500",
+    0.5: "text-orange-300",
+    0.65: "text-yellow-300",
+    0.75: "text-green-300",
+    0.85: "text-green-500",
+    0.9: "text-blue-400",
+    0.98: "text-blue-500",
+};
+
+const getConfidenceColorClass = (confidence: number) => {
+    const textColor = Object.entries(verboseColorMap).reduce(
+        (acc, [threshold, color]) => {
+            if (confidence >= parseFloat(threshold)) {
+                return color;
+            }
+            return acc;
+        },
+        "",
+    );
+    return textColor;
+};
+
 type GroupingMode =
     | ViewModesEnum.Type
     | ViewModesEnum.Category
     | ViewModesEnum.Group
-    | ViewModesEnum.Block
+    // | ViewModesEnum.Block
     | ViewModesEnum.LineNumber
     | ViewModesEnum.AtomicBlock2;
 
@@ -49,9 +75,9 @@ export function GenericAstView({
                 case ViewModesEnum.Group:
                     groupKey = tokenInfo.match.group;
                     break;
-                case ViewModesEnum.Block:
-                    groupKey = `${tokenInfo.blockType}-${tokenInfo.blockId}`;
-                    break;
+                // case ViewModesEnum.Block:
+                //     groupKey = `${tokenInfo.blockType}-${tokenInfo.blockId}`;
+                //     break;
                 case ViewModesEnum.LineNumber:
                     groupKey = `Line ${tokenInfo.lineNumber}`;
                     break;
@@ -66,7 +92,7 @@ export function GenericAstView({
                     const lastGroup = groups[groups.length - 1];
                     lastGroup.averageConfidence = lastGroup
                         ? lastGroup.tokens.reduce(
-                              (sum, t) => sum + t.confidence,
+                              (sum, t) => sum + parseFloat(t.confidence),
                               0,
                           ) / lastGroup.tokens.length
                         : 0;
@@ -84,8 +110,10 @@ export function GenericAstView({
         if (groups.length > 0) {
             const lastGroup = groups[groups.length - 1];
             lastGroup.averageConfidence = lastGroup
-                ? lastGroup.tokens.reduce((sum, t) => sum + t.confidence, 0) /
-                  lastGroup.tokens.length
+                ? lastGroup.tokens.reduce(
+                      (sum, t) => sum + parseFloat(t.confidence),
+                      0,
+                  ) / lastGroup.tokens.length
                 : 0;
         }
         return groups;
@@ -96,24 +124,23 @@ export function GenericAstView({
             {tokenList.map((t, index) => (
                 <span
                     data-content={`#${index}: ${t.group}`}
-                    className={`atomic-block`}
-                    style={{
-                        color: getUniqueColor(),
-                    }}
+                    className={`atomic-block ${getConfidenceColorClass(
+                        t.averageConfidence,
+                    )}`}
                     key={index}
                 >
                     {t.tokens.map((tk, itk) => (
                         <span
                             key={tk.token_string + tk.position}
                             className="tooltip tooltip-right inline"
-                            data-tip={`#${index} - ${itk}: ${t.group} (C: ${(tk.confidence * 100).toFixed(2)}% | AC: ${(
+                            data-tip={`#${index} - ${itk}: ${t.group} (C: ${(parseFloat(tk.confidence) * 100).toFixed(2)}% | AC: ${(
                                 t.averageConfidence * 100
                             ).toFixed(2)}% for ${t.tokens.length} tokens)`}
                         >
                             <span
                                 className="hover:font-bold hover:text-white"
                                 onClick={() => {
-                                    // TODO: 
+                                    // TODO:
                                     // generationStore.selectedToken.value = tk;
                                     // globalStore.viewMode.value = "generation";
                                 }}

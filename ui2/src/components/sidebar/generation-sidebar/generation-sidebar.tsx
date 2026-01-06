@@ -184,7 +184,17 @@ export function Content({ token }: { token: GenerationToken }) {
                     </div>
                 ))}
             </div>
-            <div className="mt-4">{token.branchId}</div>
+            <div className="mt-4 flex items-center">
+                <div>{token.branchId}</div>
+                <div className="grow" />
+                <div>
+                    {token.perplexity === undefined
+                        ? "Not Calculated"
+                        : isNaN(token.perplexity)
+                          ? "N/A"
+                          : token.perplexity.toFixed(3)}
+                </div>
+            </div>
             <div className="divider" />
             <div>
                 {token.prompt || token.manual ? (
