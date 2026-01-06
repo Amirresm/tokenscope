@@ -17,8 +17,9 @@
     "@tanstack/react-query": "^5.74.4",
     "@xyflow/react": "^12.10.0",
     "react": "^19.0.0",
-    "react-charts": "^3.0.0-beta.57",
     "react-dom": "^19.0.0",
+    "react-is": "^19.2.3",
+    "recharts": "^3.6.0",
     "simple-statistics": "^7.8.8",
     "tailwindcss": "^4.0.15"
   },

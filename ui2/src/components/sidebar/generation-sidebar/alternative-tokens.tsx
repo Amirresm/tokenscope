@@ -1,6 +1,23 @@
 import { Chart, Datum } from "react-charts";
 import { GenerationToken } from "../../../models/generationToken";
 import React from "react";
+// import {
+//     ChartConfig,
+//     ChartContainer,
+//     ChartLegend,
+//     ChartLegendContent,
+//     ChartTooltip,
+//     ChartTooltipContent,
+// } from "../../ui/Chart";
+import {
+    Bar,
+    BarChart,
+    BarRectangleItem,
+    CartesianGrid,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
 function visualizeWhitespace(str: string) {
     return str
@@ -18,97 +35,96 @@ export default function AlternativeTokens({
     alternativeTokens: GenerationToken[];
     onClick: (tokens: string) => void;
 }) {
-    const data = React.useMemo(
-        () => [
-            {
-                label: "Tokens",
-                data: alternativeTokens.map((t) => ({
-                    x: {
-                        text: visualizeWhitespace(t.token),
-                        original: t.token,
-                    },
-                    y: t.confidence,
-                    sampledToken: token.tokenId === t.tokenId,
-                })),
-            },
-        ],
+    // const chartConfig = {
+    //     token: {
+    //         label: "Alternative Tokens",
+    //         color: "#25837b",
+    //     },
+    //     sampled: { label: "Sampled Token", color: "#d0d060" },
+    // } satisfies ChartConfig;
+
+    const chartData = React.useMemo(
+        () =>
+            alternativeTokens.map((t) => ({
+                tokenStringVisualized: visualizeWhitespace(t.token),
+                confidence: t.confidence,
+                tokenString: t.token,
+                sampledToken: token.tokenId === t.tokenId,
+                fill:
+                    token.tokenId === t.tokenId
+                        ? "var(--color-sampled)"
+                        : "var(--color-token)",
+            })),
         [alternativeTokens],
     );
 
-    const primaryAxis = React.useMemo(
-        () => ({
-            getValue: (datum: any) => datum.x.text,
-            scaleType: "band" as const,
-        }),
-        [],
-    );
-
-    const secondaryAxes = React.useMemo(
-        () => [
-            {
-                getValue: (datum: any) => datum.y,
-                scaleType: "linear" as const,
-                min: 0,
-                max: 1,
-            },
-        ],
-        [],
-    );
-
-    const handleClick = React.useCallback(
-        (
-            datum: Datum<{
-                x: { text: string; original: string };
-                y: number;
-            }> | null,
-        ) => {
-            console.log("Clicked datum:", datum);
-            if (datum)
-                datum.originalDatum.x &&
-                    onClick(datum.originalDatum.x.original);
-        },
-        [],
-    );
+    const handleClick = React.useCallback((data: BarRectangleItem) => {
+        if (data)
+            data.payload?.tokenString && onClick(data.payload.tokenString);
+    }, []);
 
     return (
         <div>
             <div className="text-xl text-secondary-content">
                 Alternate Tokens
             </div>
-            <div className="h-64 w-full mt-4">
-                <Chart
-                    options={{
-                        data,
-                        primaryAxis,
-                        secondaryAxes,
-                        dark: true,
-                        onClickDatum: handleClick,
-                        getDatumStyle: (datum, status) => {
-                            return {
-                                fill: datum.originalDatum.sampledToken
-                                    ? "#009979"
-                                    : "#3b82f6",
-                            };
-                        },
-                    }}
-                />
+            <div className="mt-4">
+                <BarChart
+                    height={300}
+                    width="100%"
+                    accessibilityLayer
+                    data={chartData}
+                    margin={{ top: 8, right: 0, bottom: 24, left: -16 }}
+                    
+                >
+                    {/* <CartesianGrid vertical={false} /> */}
+                    <XAxis
+                        style={{ fontSize: "0.75rem" }}
+                        dataKey="tokenStringVisualized"
+                        tickMargin={24}
+                        tickLine={false}
+                        axisLine={false}
+                        angle={-45}
+                    />
+                    <YAxis
+                        style={{ fontSize: "0.75rem" }}
+                        dataKey="confidence"
+                        tickMargin={10}
+                        axisLine={false}
+                        domain={[0, 1]}
+                    />
+                    <Tooltip
+                        cursor={{
+                            fill: "var(--color-base-200)",
+                        }}
+                        content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                    <div className="text-xs bg-base-100 p-2 rounded-lg border border-base-300 shadow-lg">
+                                        <div className="font-bold mb-1">
+                                            Token: "{data.tokenStringVisualized}
+                                            "
+                                        </div>
+                                        <div>
+                                            Confidence:{" "}
+                                            {(data.confidence * 100).toFixed(2)}
+                                            %
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        }}
+                    />
+                    <Bar
+                        dataKey="confidence"
+                        radius={4}
+                        onClick={handleClick}
+                        className="cursor-pointer fill-blue-500"
+                    />
+                </BarChart>
             </div>
-            {/* <div key={token.token} className="menu mt-4 w-full all-tokens-list"> */}
-            {/*     {alternativeTokens.map((t) => ( */}
-            {/*         <li key={t.token}> */}
-            {/*             <a */}
-            {/*                 className={`flex justify-between items-center p-1`} */}
-            {/*                 onClick={() => onClick(t.token)} */}
-            {/*             > */}
-            {/*                 <div>{visualizeWhitespace(t.token)}</div> */}
-            {/*                 <div>{t.confidence.toFixed(2)}</div> */}
-            {/*                 {t.token === token.token && ( */}
-            {/*                     <span> (current) </span> */}
-            {/*                 )} */}
-            {/*             </a> */}
-            {/*         </li> */}
-            {/*     ))} */}
-            {/* </div> */}
         </div>
     );
 }
