@@ -146,7 +146,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         );
 
         return textColor;
-    }, [prompt, manual, colorVerbosity, tokenTypes, metricValue]);
+    }, [prompt, manual, colorVerbosity, tokenTypes, metricValue, metric, metricPercetiles]);
 
     const startOfLineMarkerColor = React.useMemo(() => {
         if (lineConfidence === undefined) return "";

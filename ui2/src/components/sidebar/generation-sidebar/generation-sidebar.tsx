@@ -190,8 +190,8 @@ export function Content({ token }: { token: GenerationToken }) {
                     <thead>
                         <tr className="text-xs">
                             {/* <th>Branch</th> */}
-                            <th>Perplexity</th>
-                            <th>Last Perplexity</th>
+                            <th>PPL</th>
+                            <th>Last PPL</th>
                             <th>Std. Dev</th>
                         </tr>
                     </thead>
@@ -224,37 +224,43 @@ export function Content({ token }: { token: GenerationToken }) {
             <div className="divider" />
             <div>
                 {token.prompt || token.manual ? (
-                    <div className="text-xl text-secondary-content">
-                        {token.prompt ? "Prompt" : "Manual"}
+                    <div className="text-sm italic text-gray-500">
+                        No Alternative Tokens For '{token.prompt ? "Prompt" : "Manual"}' Token
                     </div>
-                ) : (
+                ) : token.alternativeTokens &&
+                  token.alternativeTokens.length > 0 ? (
                     <AlternativeTokens
                         token={token}
-                        alternativeTokens={token.alternativeTokens || []}
+                        alternativeTokens={token.alternativeTokens}
                         onClick={handleSubstituteToken}
                     />
+                ) : (
+                    <div className="text-sm italic text-gray-500">
+                        No Alternative Tokens Available
+                    </div>
                 )}
             </div>
             <div className="divider" />
             <div className="flex gap-2 mb-4">
-                <button
-                    className={`btn btn-sm ${generationMode === "continue" ? "" : "btn-ghost"}`}
-                    onClick={() => setGenerationMode("continue")}
-                >
-                    continue
-                </button>
-                <button
-                    className={`btn btn-sm ${generationMode === "fim" ? "" : "btn-ghost"}`}
-                    onClick={() => setGenerationMode("fim")}
-                >
-                    FIM
-                </button>
+                {/* <button */}
+                {/*     className={`btn btn-sm ${generationMode === "continue" ? "" : "btn-ghost"}`} */}
+                {/*     onClick={() => setGenerationMode("continue")} */}
+                {/* > */}
+                {/*     continue */}
+                {/* </button> */}
+                {/* <button */}
+                {/*     className={`btn btn-sm ${generationMode === "fim" ? "" : "btn-ghost"}`} */}
+                {/*     onClick={() => setGenerationMode("fim")} */}
+                {/* > */}
+                {/*     FIM */}
+                {/* </button> */}
+                Replace Token With
             </div>
             {generationMode === "continue" ? (
                 <div className="flex flex-col gap-2">
                     <textarea
-                        className="input"
-                        placeholder="Enter token"
+                        className="input p-2"
+                        placeholder="Enter token (or tokens) to substitute"
                         value={substituteToken}
                         onChange={handleSubstituteTokenChange}
                     />
@@ -271,11 +277,16 @@ export function Content({ token }: { token: GenerationToken }) {
 
             <div className="divider" />
             <div className="flex flex-col gap-2">
-                <div className="text-sm">
-                    {token.relativeAttention !== undefined
-                        ? `Relative Attention: ${token.relativeAttention?.toFixed(3)}`
-                        : "No Relative Attention"}
-                </div>
+                {token.relativeAttention !== undefined ? (
+                    <div className="text-sm">
+                        Relative Attention:{" "}
+                        {token.relativeAttention?.toFixed(3)}
+                    </div>
+                ) : (
+                    <div className="text-sm italic text-gray-500">
+                        Relative Attention Not Available
+                    </div>
+                )}
                 <div className="flex items-center">
                     <div className="dropdown dropdown-top">
                         <div

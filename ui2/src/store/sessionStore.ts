@@ -9,9 +9,15 @@ const setBranchId = (id: string | null) => {
     branchId.value = id;
 };
 
+const resetSession = () => {
+    sessionId.value = null;
+    branchId.value = null;
+}
+
 export default {
     sessionId,
     setSessionId,
     branchId,
     setBranchId,
+    resetSession,
 }

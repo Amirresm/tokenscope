@@ -1,11 +1,11 @@
 import React from "react";
 import { AstTokenInfo, AtomicBlock } from "../../models/ast";
-import { ViewModesEnum } from "./AstPage";
 import "./GenericAstView.css";
 import { GenerationTokenData } from "../../models/generationToken";
 import { getUniqueColor } from "../../utils/unqiueColorGenerator";
 import generationStore from "../../store/generationStore";
 import globalStore from "../../store/components/globalStore";
+import { ViewModesEnum } from "../../store/components/astStore";
 
 function visualizeWhitespace(str: string) {
     return str;

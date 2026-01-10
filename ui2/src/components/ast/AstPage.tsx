@@ -42,25 +42,12 @@ function RangeSelector({ source, onSelectRange }: RangeSelectorProps) {
     );
 }
 
-export enum ViewModesEnum {
-    Type = "type",
-    Category = "category",
-    Group = "group",
-    // Block = "block",
-    LineNumber = "lineNumber",
-    // AtomicBlock = "atomicBlock",
-    AtomicBlock2 = "atomicBlock",
-}
-
 export function AstPage() {
     const sessionId = sessionStore.sessionId.value;
     const branchId = sessionStore.branchId.value;
 
     const selectedRange = astStore.selectedRange.value;
-
-    const [viewMode, setViewMode] = React.useState<ViewModesEnum>(
-        ViewModesEnum.Type,
-    );
+    const astViewMode = astStore.astViewMode.value;
 
     const source = generationStore.currentGeneration.value
         ?.map((t) => t.token)
@@ -111,38 +98,9 @@ export function AstPage() {
 
     return (
         <div className="m-4 min-h-0 flex flex-col">
-            <div>
-                <div className="dropdown">
-                    <div tabIndex={0} role="button" className="btn m-1">
-                        View Mode: {viewMode}
-                    </div>
-                    <ul
-                        tabIndex={0}
-                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                    >
-                        {Object.values(ViewModesEnum).map((mode) => (
-                            <li key={mode} onClick={() => setViewMode(mode)}>
-                                <a
-                                    className={
-                                        viewMode === mode ? "font-bold" : ""
-                                    }
-                                >
-                                    {mode}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <button
-                    className="btn btn-ghost m-1"
-                    onClick={() => (astStore.selectedRange.value = null)}
-                >
-                    Clear Range Selection
-                </button>
-            </div>
             <GenericAstView
                 astTokens={astDataQuery.data.astTokens}
-                groupingMode={viewMode}
+                groupingMode={astViewMode}
             />
             {/* {viewMode === ViewModesEnum.AtomicBlock ? ( */}
             {/*     <BlockView atomicBlocks={astDataQuery.data.atomicBlocks} /> */}

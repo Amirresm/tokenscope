@@ -10,6 +10,7 @@ import React from "react";
 import drawerStore, { DrawerTabsEnum } from "./store/components/drawerStore";
 import { LLMManagementModal } from "./components/llm-management/LLMManagementModal";
 import { TrendChartModal } from "./components/reports/TrendChart";
+import { MainBar } from "./components/main-bar/MainBar";
 
 const tabs = [
     { tab: DrawerTabsEnum.SESSION, icon: UserIcon },
@@ -39,10 +40,12 @@ function App() {
             <input
                 id="my-drawer"
                 type="checkbox"
-                className="group drawer-toggle"
+                className="drawer-toggle"
                 checked={drawerOpen}
+                onChange={() => {}}
             />
-            <div className="drawer-content transition-all h-screen mr-4 flex">
+            <div className="drawer-content transition-all h-screen mx-4 flex">
+                <MainBar />
                 <div className="grow min-w-0">
                     <LLMManagementModal />
                     <TrendChartModal />
@@ -69,7 +72,9 @@ function App() {
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
-                <Sidebar />
+                <div className="translate-x-96 is-drawer-open:translate-x-0 transition-transform duration-75">
+                    <Sidebar />
+                </div>
             </div>
         </div>
     );

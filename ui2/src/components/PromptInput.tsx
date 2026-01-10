@@ -1,20 +1,12 @@
 import React from "react";
 import DynamicTextarea from "./DynamicTextarea";
 import generationStore from "../store/generationStore";
-import { GearIcon, PaintBucketIcon } from "@phosphor-icons/react";
 import sessionStore from "../store/sessionStore";
-import globalStore from "../store/components/globalStore";
 import { continueGeneration, generateNew } from "../api/generationAPI";
-import tokenLevelViewStore, {
-    ColorVerbosityEnum,
-} from "../store/components/tokenLevelViewStore";
-import { TokenLevelConfigDropdown } from "./TokenLevelConfigDropdown";
 
 export function PromptInput() {
     const sessionId = sessionStore.sessionId.value;
     const branchId = sessionStore.branchId.value;
-
-    const viewMode = globalStore.viewMode.value;
 
     const [value, setValue] = React.useState("");
 
@@ -80,40 +72,9 @@ export function PromptInput() {
         sessionId,
     ]);
 
-    const handleReset = React.useCallback(() => {
-        // setValue("");
-        generationStore.clearGeneration();
-        generationStore.isGenerating.value = false;
-        generationStore.paused.value = false;
-        if (generationStore.generationAbort.value) {
-            generationStore.generationAbort.value.abort();
-        }
-    }, []);
-
-    const handleChangeColorVerbosity = React.useCallback(
-        (option: ColorVerbosityEnum) => () => {
-            const activeElement = document.activeElement as HTMLElement;
-            activeElement?.blur();
-            tokenLevelViewStore.updateConfig({
-                colorVerbosity: option,
-            });
-        },
-        [],
-    );
-
-    const handleChangeViewMode = React.useCallback(
-        (mode: "generation" | "graph" | "ast") => () => {
-            const activeElement = document.activeElement as HTMLElement;
-            activeElement?.blur();
-            globalStore.viewMode.value = mode;
-        },
-        [],
-    );
-
-    const colorVerbosityOptions = Object.values(ColorVerbosityEnum);
-
     return (
-        <div className="sticky z-10 top-0 px-4 pt-4 bg-base-100/50 backdrop-blur-lg">
+        <div className="h-full sticky z-10 top-0 px-36 pt-4 backdrop-blur-lg flex flex-col justify-center">
+            <div className="fixed inset-0 main-bg-gradient -z-10" />
             <DynamicTextarea
                 value={value}
                 onChange={handleChange}
@@ -121,37 +82,6 @@ export function PromptInput() {
                 collapsed={hasGeneration}
             />
             <div className="flex gap-2 mt-4 items-center">
-                <div className="dropdown">
-                    <button
-                        className="btn"
-                        popoverTarget="popover-1"
-                        style={{
-                            anchorName: "--anchor-1",
-                        }}
-                    >
-                        <GearIcon />
-                    </button>
-                    <TokenLevelConfigDropdown />
-                </div>
-                <div className="dropdown">
-                    <div tabIndex={0} role="button" className="btn m-1">
-                        View Mode: {viewMode}
-                    </div>
-                    <ul
-                        tabIndex={0}
-                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                    >
-                        <li onClick={handleChangeViewMode("generation")}>
-                            <a>Generation View</a>
-                        </li>
-                        <li onClick={handleChangeViewMode("graph")}>
-                            <a>Graph View</a>
-                        </li>
-                        <li onClick={handleChangeViewMode("ast")}>
-                            <a>Code Analysis View</a>
-                        </li>
-                    </ul>
-                </div>
                 <div className="grow" />
                 <label className="input w-40">
                     <span className="text-gray-500">Attention Layer</span>
@@ -182,9 +112,6 @@ export function PromptInput() {
                         }
                     />
                 </label>
-                <button className="btn" onClick={handleReset}>
-                    Reset
-                </button>
                 <button className="btn btn-neutral" onClick={handleSubmit}>
                     {isGenerating ? "Pause" : isPaused ? "Resume" : "Generate"}
                 </button>

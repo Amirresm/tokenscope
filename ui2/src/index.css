@@ -42,6 +42,10 @@
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
+
+    --bg-color1: rgba(0, 0, 80, 0.1);
+    --bg-color2: rgba(36, 16, 40, 0.5);
+    --bg-color3: rgba(10, 46, 40, 0.5);
 }
 
 @plugin "daisyui/theme" {
@@ -83,6 +87,10 @@
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
+
+    --bg-color1: rgba(155, 255, 255, 0.1);
+    --bg-color2: rgba(255, 155, 255, 0.9);
+    --bg-color3: rgba(10, 46, 40, 0.9);
 }
 
 :root {
@@ -92,3 +100,45 @@
 /* .recharts-rectangle.recharts-tooltip-cursor { */
 /*     @apply fill-base-200; */
 /* } */
+
+.main-bg-gradient {
+    background:
+        linear-gradient(
+            -45deg,
+            var(--bg-color1),
+            var(--bg-color2),
+            var(--bg-color1),
+            var(--bg-color3),
+            var(--bg-color1)
+        ),
+        repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.5), transparent 50px),
+        repeating-linear-gradient(-45deg, black, transparent 50px);
+    background-size: 200% 200%;
+    animation: bg-gradient 120s cubic-bezier(0.85, 0, 0.15, 1) infinite alternate;
+
+    -webkit-mask:
+        linear-gradient(to top, transparent 20%, #fff 40% 60%, transparent 90%),
+        linear-gradient(to left, transparent 0%, #fff 10% 90%, transparent 100%);
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-composite: intersect;
+
+    mask:
+        linear-gradient(to top, transparent 0%, #fff 40% 60%, transparent 100%),
+        linear-gradient(to left, transparent 0%, #fff 10% 90%, transparent 100%);
+    mask-size: 100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
+}
+
+@keyframes bg-gradient {
+    0% {
+        background-position: 25% 50%;
+    }
+
+    100% {
+        background-position: 85% 50%;
+    }
+}

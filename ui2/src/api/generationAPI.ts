@@ -173,7 +173,6 @@ const handleTokenGenerationStream = async (
     generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
     generationStore.lastPerplexityTenPercentiles.value =
         lastPerplexityPercentiles;
-    console.log(lastPerplexityPercentiles)
     generationStore.stdevTenPercentiles.value = stdevPercentiles;
 
     generationStore.confidenceDomain.value = [

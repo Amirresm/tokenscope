@@ -7,10 +7,10 @@ const handleResize = (
 ) => {
     if (textarea) {
         const minHightExpanded = 150;
-        const maxHightExpanded = 500;
+        const maxHightExpanded = 250;
 
-        const minHightCollapsed = 50;
-        const maxHightCollapsed = 75;
+        const minHightCollapsed = 250;
+        const maxHightCollapsed = 500;
         const minHeight = collapsed ? minHightCollapsed : minHightExpanded;
         const maxHeight = collapsed ? maxHightCollapsed : maxHightExpanded;
 
@@ -96,10 +96,11 @@ export default React.memo((props: DynamicTextareaProps) => {
     return (
         <div className="w-full">
             <div
-                className={`rounded-field border ${props.disabled ? "border-warning" : "border-base-300"} bg-base-200 px-2 py-2`}
+                className={`rounded-2xl border ${props.disabled ? "border-warning" : "border-base-300"} bg-base-200 px-4 py-2`}
             >
                 <textarea
                     ref={textareaRef}
+                    placeholder="Type your prompt here..."
                     className="w-full resize-none outline-none"
                     value={value}
                     onChange={handleChange}
