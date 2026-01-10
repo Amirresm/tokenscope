@@ -42,6 +42,11 @@ const metricOptions = [
         icon: <CrosshairIcon size={16} />,
     },
     {
+        label: TokenMetrics.lastPerplexity.label,
+        value: "lastPerplexity",
+        icon: <CrosshairIcon size={16} />,
+    },
+    {
         label: TokenMetrics.std.label,
         value: "std",
         icon: <CrosshairSimpleIcon size={16} />,

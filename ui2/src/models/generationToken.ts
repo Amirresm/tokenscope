@@ -24,6 +24,7 @@ export type GenerationTokenData = {
     token_id: number;
     confidence: string;
     perplexity?: string;
+    last_perplexity?: string;
     position: number;
     token_types: string[];
     alternative_tokens?: GenerationTokenData[];
@@ -38,6 +39,7 @@ export type GenerationToken = {
 
     confidence: number;
     perplexity?: number;
+    lastPerplexity?: number;
     std?: number;
 
     position: number;
@@ -92,6 +94,9 @@ export function generationTokenFromData(
                 ? parseFloat(data.confidence)
                 : data.confidence,
         perplexity: data.perplexity ? parseFloat(data.perplexity) : undefined,
+        lastPerplexity: data.last_perplexity
+            ? parseFloat(data.last_perplexity)
+            : undefined,
         std: std,
         position: data.position,
         tokenTypes: tokenTypes,

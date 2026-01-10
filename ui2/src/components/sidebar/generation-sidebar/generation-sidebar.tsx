@@ -189,20 +189,28 @@ export function Content({ token }: { token: GenerationToken }) {
                 <table className="table">
                     <thead>
                         <tr className="text-xs">
-                            <th>Branch</th>
+                            {/* <th>Branch</th> */}
                             <th>Perplexity</th>
+                            <th>Last Perplexity</th>
                             <th>Std. Dev</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr className="text-xs">
-                            <td>{token.branchId}</td>
+                            {/* <td>{token.branchId}</td> */}
                             <td className="text-center">
                                 {token.perplexity === undefined
                                     ? "Not Calculated"
                                     : isNaN(token.perplexity)
                                       ? "N/A"
                                       : token.perplexity.toFixed(3)}
+                            </td>
+                            <td className="text-center">
+                                {token.lastPerplexity === undefined
+                                    ? "Not Calculated"
+                                    : isNaN(token.lastPerplexity)
+                                      ? "N/A"
+                                      : token.lastPerplexity.toFixed(3)}
                             </td>
                             <td className="text-center">
                                 {token.std === undefined

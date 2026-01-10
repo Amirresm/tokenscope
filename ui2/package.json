@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@amcharts/amcharts5": "^5.15.1",
     "@dagrejs/dagre": "^1.1.8",
     "@phosphor-icons/react": "^2.1.7",
     "@preact/signals-react": "^3.0.1",

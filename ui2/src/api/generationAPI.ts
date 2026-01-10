@@ -85,6 +85,7 @@ const handleTokenGenerationStream = async (
     // get min max for metrics
     const confidenceDomain = [Infinity, -Infinity];
     const perplexityDomain = [Infinity, -Infinity];
+    const lastPerplexityDomain = [Infinity, -Infinity];
     const stdevDomain = [Infinity, -Infinity];
 
     for (const token of generationStore.currentGeneration.value) {
@@ -108,6 +109,19 @@ const handleTokenGenerationStream = async (
                 token.perplexity,
             );
         }
+        if (
+            token.lastPerplexity !== undefined &&
+            !isNaN(token.lastPerplexity)
+        ) {
+            lastPerplexityDomain[0] = Math.min(
+                lastPerplexityDomain[0],
+                token.lastPerplexity,
+            );
+            lastPerplexityDomain[1] = Math.max(
+                lastPerplexityDomain[1],
+                token.lastPerplexity,
+            );
+        }
         if (token.std !== undefined) {
             stdevDomain[0] = Math.min(stdevDomain[0], token.std);
             stdevDomain[1] = Math.max(stdevDomain[1], token.std);
@@ -117,6 +131,7 @@ const handleTokenGenerationStream = async (
     // get percentiles for metrics
     const confidencePercentiles: number[] = [];
     const perplexityPercentiles: number[] = [];
+    const lastPerplexityPercentiles: number[] = [];
     const stdevPercentiles: number[] = [];
 
     for (let p = 0; p < 100; p += 20) {
@@ -136,6 +151,15 @@ const handleTokenGenerationStream = async (
         if (perpPerc !== null) {
             perplexityPercentiles.push(perpPerc);
         }
+        const lastPerpPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) =>
+                t.lastPerplexity !== undefined ? t.lastPerplexity : Infinity,
+            p,
+        );
+        if (lastPerpPerc !== null) {
+            lastPerplexityPercentiles.push(lastPerpPerc);
+        }
         const stdPerc = calcPercentile(
             generationStore.currentGeneration.value,
             (t) => (t.std !== undefined ? t.std : 0),
@@ -147,6 +171,9 @@ const handleTokenGenerationStream = async (
     }
     generationStore.confidenceTenPercentiles.value = confidencePercentiles;
     generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
+    generationStore.lastPerplexityTenPercentiles.value =
+        lastPerplexityPercentiles;
+    console.log(lastPerplexityPercentiles)
     generationStore.stdevTenPercentiles.value = stdevPercentiles;
 
     generationStore.confidenceDomain.value = [
@@ -156,6 +183,10 @@ const handleTokenGenerationStream = async (
     generationStore.perplexityDomain.value = [
         perplexityDomain[0],
         perplexityDomain[1],
+    ];
+    generationStore.lastPerplexityDomain.value = [
+        lastPerplexityDomain[0],
+        lastPerplexityDomain[1],
     ];
     generationStore.stdevDomain.value = [stdevDomain[0], stdevDomain[1]];
 

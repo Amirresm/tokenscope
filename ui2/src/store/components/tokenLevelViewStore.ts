@@ -9,6 +9,7 @@ export enum ColorVerbosityEnum {
 export const TokenMetrics = {
     confidence: { label: "Confidence" },
     perplexity: { label: "Perplexity" },
+    lastPerplexity: { label: "Last Perplexity" },
     std: { label: "Std. Deviation" },
 } as const;
 

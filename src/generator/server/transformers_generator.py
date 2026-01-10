@@ -182,9 +182,11 @@ class BatchGenerator(Generator):
                 perplexity = None
                 if calc_perplexity:
                     single_input_ids = input_ids[i : i + 1, : j + 1]
-                    perplexity = self._call_model_and_calculate_perplexity(
-                        single_input_ids,
-                        torch.ones_like(single_input_ids),
+                    perplexity, last_perplexity = (
+                        self._call_model_and_calculate_perplexity(
+                            single_input_ids,
+                            torch.ones_like(single_input_ids),
+                        )
                     )
 
                 prompt_step_result = Token(
@@ -193,6 +195,7 @@ class BatchGenerator(Generator):
                     token_id=token_id,
                     confidence=1.0,
                     perplexity=perplexity,
+                    last_perplexity=last_perplexity,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -234,8 +237,10 @@ class BatchGenerator(Generator):
                 if calc_perplexity:
                     single_input_ids = input_ids[i : i + 1, : j + 1]
                     single_attention_mask = attention_mask[i : i + 1, : j + 1]
-                    perplexity = self._call_model_and_calculate_perplexity(
-                        single_input_ids, single_attention_mask
+                    perplexity, last_perplexity = (
+                        self._call_model_and_calculate_perplexity(
+                            single_input_ids, single_attention_mask
+                        )
                     )
 
                 prompt_step_result = Token(
@@ -244,6 +249,7 @@ class BatchGenerator(Generator):
                     token_id=token_id,
                     confidence=1.0,
                     perplexity=perplexity,
+                    last_perplexity=last_perplexity,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -288,7 +294,7 @@ class BatchGenerator(Generator):
                 use_cache=True,
             )
         logits = output.logits
-        perplexity = self._calculate_perplexity(
+        perplexity, last_perplexity = self._calculate_perplexity(
             logits, input_ids, attention_mask
         )
 
@@ -343,6 +349,7 @@ class BatchGenerator(Generator):
                 token_id=token_id,
                 confidence=confidence,
                 perplexity=perplexity,
+                last_perplexity=last_perplexity,
                 token_types=token_types,
                 alternative_tokens=[
                     Token(
@@ -351,6 +358,7 @@ class BatchGenerator(Generator):
                         token_id=tok_id,
                         confidence=conf,
                         perplexity=None,
+                        last_perplexity=None,
                         token_types=[],
                     )
                     for tok_id, conf in zip(all_token_ids, all_confidences)
@@ -362,42 +370,75 @@ class BatchGenerator(Generator):
 
         return step_tokens, input_ids, attention_mask, output.past_key_values
 
-    def _calculate_perplexity(
-        self, logits, target_ids, attention_mask
-    ) -> float:
-        shift_logits = logits[:, :-1, :].contiguous()
-        shift_labels = target_ids[:, 1:].contiguous()
-        shift_attention_mask = attention_mask[:, 1:].contiguous()
+    def _calculate_perplexity(self, logits, target_ids, attention_mask):
+        batch_size, seq_len = target_ids.shape
+        device = logits.device
 
-        if (
-            self.model.t.pad_token is not None
-            and type(self.model.t.pad_token) == str
-        ):
-            pad_token_id = int(self.model.t.pad_token_id)
+        # ---------
+        # CASE 1: sequence length >= 2 (standard perplexity)
+        # ---------
+        if seq_len > 1:
+            shift_logits = logits[:, :-1, :].contiguous()
+            shift_labels = target_ids[:, 1:].contiguous()
+            shift_mask = attention_mask[:, 1:].contiguous()
+
+            if self.model.t.pad_token is not None and isinstance(
+                self.model.t.pad_token, str
+            ):
+                pad_token_id = int(self.model.t.pad_token_id)
+            else:
+                pad_token_id = -100
+
+            loss_fct = torch.nn.CrossEntropyLoss(
+                reduction="none",
+                ignore_index=pad_token_id,
+            )
+
+            loss = loss_fct(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+            ).view(shift_labels.size())
+
+            loss = loss * shift_mask
+
+            lengths = shift_mask.sum(dim=1)
+
+            # sequence perplexity
+            seq_ppl = torch.exp(loss.sum(dim=1) / lengths)
+
+            # last valid token perplexity
+            last_token_idx = lengths.long() - 1
+            batch_idx = torch.arange(batch_size, device=device)
+            last_token_nll = loss[batch_idx, last_token_idx]
+            token_ppl = torch.exp(last_token_nll)
+
+            return (
+                float(seq_ppl.mean().detach().cpu().float().item()),
+                float(token_ppl.mean().detach().cpu().float().item()),
+            )
+
+        # ---------
+        # CASE 2: sequence length == 1 (streaming / incremental)
+        # ---------
         else:
-            pad_token_id = -100
+            # Only token-level surprisal is defined
+            logits_t = logits[:, -1, :]  # (batch, vocab)
+            log_probs = torch.log_softmax(logits_t, dim=-1)
 
-        loss_fct = torch.nn.CrossEntropyLoss(
-            reduction="none", ignore_index=pad_token_id
-        )
-        loss = loss_fct(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-        )
-        loss = loss.view(shift_labels.size())
+            token_id = target_ids[:, 0]
+            nll = -log_probs.gather(1, token_id.unsqueeze(1)).squeeze(1)
+            token_ppl = torch.exp(nll)
 
-        masked_loss = loss * shift_attention_mask
-        sum_loss = masked_loss.sum(dim=1)
-        lengths = shift_attention_mask.sum(dim=1)
-
-        perplexities = torch.exp(sum_loss / lengths)
-        return float(perplexities.detach().cpu().to(torch.float32).mean().item())
+            return (
+                0,  # sequence perplexity undefined
+                float(token_ppl.mean().detach().cpu().float().item()),
+            )
 
     def _call_model_and_calculate_perplexity(
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
-    ) -> float:
+    ):
         with torch.no_grad():
             output = self.model.m(
                 input_ids=input_ids,
@@ -405,10 +446,10 @@ class BatchGenerator(Generator):
             )
             logits = output.logits
 
-        perplexity = self._calculate_perplexity(
+        perplexity, last_perplexity = self._calculate_perplexity(
             logits, input_ids, attention_mask
         )
-        return perplexity
+        return perplexity, last_perplexity
 
     def _process_logits(
         self,

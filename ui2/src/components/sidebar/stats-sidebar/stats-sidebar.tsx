@@ -107,6 +107,18 @@ export default function StatsSidebar() {
             <div className="card w-full bg-base-100 grow">
                 <div className="card-body">
                     <h2 className="card-title">Stats</h2>
+                    <button
+                        className="btn btn-ghost btn-secondary mb-4"
+                        onClick={() => {
+                            const modal = document.getElementById(
+                                "trend_modal",
+                            ) as HTMLDialogElement;
+                            modal.showModal();
+                        }}
+                    >
+                        Show Trend Chart
+                    </button>
+
                     <div className="stats stats-vertical shadow">
                         <div className="stat">
                             <div className="stat-title">Generated Tokens</div>

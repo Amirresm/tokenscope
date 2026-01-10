@@ -18,6 +18,7 @@ class Token:
     token_id: int
     confidence: float
     perplexity: float | None
+    last_perplexity: float | None
     position: int  # or depth
 
     # token_types: set[TokenType]
@@ -31,6 +32,7 @@ class Token:
             "token_id": self.token_id,
             "confidence": self.confidence,
             "perplexity": self.perplexity,
+            "last_perplexity": self.last_perplexity,
             "position": self.position,
             "token_types": [t for t in self.token_types],
             "alternative_tokens": [
@@ -56,6 +58,11 @@ class Token:
             "perplexity": (
                 f"{self.perplexity:.6f}"
                 if self.perplexity is not None
+                else None
+            ),
+            "last_perplexity": (
+                f"{self.last_perplexity:.6f}"
+                if self.last_perplexity is not None
                 else None
             ),
             "position": self.position if self.position != -1 else None,
@@ -90,6 +97,7 @@ class Token:
             token_id=data["token_id"],
             confidence=data["confidence"],
             perplexity=data.get("perplexity", None),
+            last_perplexity=data.get("last_perplexity", None),
             position=data["position"],
             token_types=data.get("token_types", []),
             alternative_tokens=alternative_tokens,
