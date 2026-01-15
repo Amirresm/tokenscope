@@ -86,7 +86,7 @@ function Chart() {
         );
 
         series.columns.template.setAll({
-            tooltipText: "{value}",
+            tooltipText: "{categoryY} -> {categoryX} = {value}",
             strokeOpacity: 1,
             strokeWidth: 0,
             width: am5.percent(100),

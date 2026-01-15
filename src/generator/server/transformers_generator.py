@@ -211,6 +211,8 @@ class BatchGenerator(Generator):
                     confidence=1.0,
                     perplexity=perplexity,
                     last_perplexity=last_perplexity,
+                    margin_confidence=None,
+                    entropy=None,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -266,6 +268,8 @@ class BatchGenerator(Generator):
                     confidence=1.0,
                     perplexity=perplexity,
                     last_perplexity=last_perplexity,
+                    margin_confidence=None,
+                    entropy=None,
                     alternative_tokens=[],
                     token_types=tags,
                 )
@@ -360,7 +364,14 @@ class BatchGenerator(Generator):
 
         step_tokens = []
         for batch_index, result in enumerate(results):
-            token_id, confidence, all_token_ids, all_confidences = result
+            (
+                token_id,
+                confidence,
+                margin_confidence,
+                entropy,
+                all_token_ids,
+                all_confidences,
+            ) = result
             decoded_token = self.model.ids_to_str(token_id)
 
             token_types = []
@@ -385,6 +396,8 @@ class BatchGenerator(Generator):
                 confidence=confidence,
                 perplexity=perplexity,
                 last_perplexity=last_perplexity,
+                margin_confidence=margin_confidence,
+                entropy=entropy,
                 token_types=token_types,
                 alternative_tokens=[
                     Token(
@@ -395,6 +408,8 @@ class BatchGenerator(Generator):
                         confidence=conf,
                         perplexity=None,
                         last_perplexity=None,
+                        margin_confidence=None,
+                        entropy=None,
                         token_types=[],
                     )
                     for tok_id, conf in zip(all_token_ids, all_confidences)
@@ -489,64 +504,92 @@ class BatchGenerator(Generator):
         topk: int,
         topp: int,
         coeff: float,
-    ) -> tuple[list[tuple[int, float, list[int], list[float]]], torch.Tensor]:
+    ) -> tuple[
+        list[tuple[int, float, float, float, list[int], list[float]]],
+        torch.Tensor,
+    ]:
+
         new_ids = torch.zeros(
             (batch_size, 1), dtype=torch.int64, device=self.device
         )
-        logits = logits * coeff  # scale logits
-        sf = torch.nn.functional.softmax(
-            logits[:, -1, :], dim=-1
-        )  # shape: (batch_size, vocab_size)
 
-        probs, indices = torch.topk(
-            sf, topk, dim=-1
-        )  # shape: (batch_size, topk)
-        probs = probs.detach().cpu().to(torch.float32).numpy()
-        indices = indices.detach().cpu().numpy()
+        # temperature scaling (coeff = 1 / temperature)
+        logits = logits[:, -1, :] * coeff  # (batch_size, vocab)
 
-        at_probs, at_indices = torch.topk(
-            sf, alternatives, dim=-1
-        )  # shape: (batch_size, alternatives)
+        # full distribution (for confidence metrics)
+        full_probs = torch.softmax(logits, dim=-1)
+
+        # top-k sampling distribution
+        topk_logits, topk_indices = torch.topk(logits, topk, dim=-1)
+        topk_probs = torch.softmax(topk_logits, dim=-1)
+
+        # alternatives (debug)
+        at_probs, at_indices = torch.topk(full_probs, alternatives, dim=-1)
+
+        # move to cpu once
+        full_probs = full_probs.detach().cpu().to(torch.float32).numpy()
+        topk_probs = topk_probs.detach().cpu().to(torch.float32).numpy()
+        topk_indices = topk_indices.detach().cpu().numpy()
         at_probs = at_probs.detach().cpu().to(torch.float32).numpy()
         at_indices = at_indices.detach().cpu().numpy()
 
         results = []
+
         for i in range(batch_size):
-            at_p = at_probs[i]
-            at_idx = at_indices[i]
-            at_p = at_p / at_p.sum()
+            p = topk_probs[i]
+            idx = topk_indices[i]
 
-            p = probs[i]
-            idx = indices[i]
-            p = p / p.sum()
+            # --- true nucleus (top-p) filtering ---
+            if topp < 1.0:
+                order = np.argsort(-p)
+                p_sorted = p[order]
+                idx_sorted = idx[order]
 
-            if topp > 0:
-                filtered_p = []
-                filtered_idx = []
-                for prob, index in zip(p, idx):
-                    if prob >= topp:
-                        filtered_p.append(prob)
-                        filtered_idx.append(index)
-                if len(filtered_p) == 0:
-                    filtered_p = p[0:1]
-                    filtered_idx = idx[0:1]
-                p = np.array(filtered_p)
-                idx = np.array(filtered_idx)
+                cumulative = np.cumsum(p_sorted)
+                cutoff = cumulative <= topp
+                if not np.any(cutoff):
+                    cutoff[0] = True
 
-            if topp == 1:
-                chosen_index = 0
+                p = p_sorted[cutoff]
+                idx = idx_sorted[cutoff]
+                p = p / p.sum()
             else:
-                chosen_index = np.random.choice(topk, p=p)
-            new_ids[i, 0] = idx[chosen_index]
-            token_id = int(idx[chosen_index])
-            confidence = float(p[chosen_index])
+                p = p / p.sum()
+
+            # sampling
+            if topp == 0 or len(p) == 1:
+                chosen = 0
+            else:
+                chosen = np.random.choice(len(p), p=p)
+
+            token_id = int(idx[chosen])
+            new_ids[i, 0] = token_id
+
+            # ---------- confidence metrics ----------
+            fp = full_probs[i]
+
+            # 1) true model confidence
+            confidence = float(fp[token_id])
+
+            # 2) margin confidence (top-1 - top-2)
+            top2 = np.partition(fp, -2)[-2:]
+            margin_confidence = float(top2[1] - top2[0])
+
+            # 3) entropy
+            entropy = float(-np.sum(fp * np.log(fp + 1e-12)))
+
+            # alternatives (normalized for readability)
+            # at_p = at_probs[i]
+            # at_p = at_p / at_p.sum()
 
             results.append(
                 (
                     token_id,
                     confidence,
-                    typing.cast(list[int], at_idx.tolist()),
-                    at_p.tolist(),
+                    margin_confidence,
+                    entropy,
+                    at_indices[i].tolist(),
+                    at_probs[i].tolist(),
                 )
             )
 

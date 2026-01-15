@@ -182,7 +182,8 @@ export function Content({ token }: { token: GenerationToken }) {
                             {/* <th>Branch</th> */}
                             <th>PPL</th>
                             <th>Last PPL</th>
-                            <th>Std. Dev</th>
+                            <th>Margin Conf.</th>
+                            <th>Entropy</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -203,9 +204,14 @@ export function Content({ token }: { token: GenerationToken }) {
                                       : token.lastPerplexity.toFixed(3)}
                             </td>
                             <td className="text-center">
-                                {token.std === undefined
+                                {token.marginConfidence === undefined
                                     ? "Not Calculated"
-                                    : token.std.toFixed(3)}
+                                    : token.marginConfidence.toFixed(3)}
+                            </td>
+                            <td className="text-center">
+                                {token.entropy === undefined
+                                    ? "Not Calculated"
+                                    : token.entropy.toFixed(3)}
                             </td>
                         </tr>
                     </tbody>

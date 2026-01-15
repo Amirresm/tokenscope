@@ -11,7 +11,7 @@ export type GenerationSettings = {
     maxTokens: number;
     topK: number;
     topP: number;
-    coeff: number;
+    coeff: string;
     alternatives: number;
     attentionLayer: number;
     attentionTopN: number;
@@ -20,7 +20,7 @@ const generationSettings = signal<GenerationSettings>({
     maxTokens: 256,
     topK: 1,
     topP: 0,
-    coeff: 1.0,
+    coeff: "1.0",
     alternatives: 5,
     attentionLayer: -1,
     attentionTopN: 10,
@@ -201,11 +201,11 @@ export default {
     confidenceDomain: signal<[number, number]>([-1, 1]),
     perplexityDomain: signal<[number, number]>([-1, Infinity]),
     lastPerplexityDomain: signal<[number, number]>([-1, Infinity]),
-    stdevDomain: signal<[number, number]>([-1, Infinity]),
     confidenceTenPercentiles: signal<number[]>([]),
     perplexityTenPercentiles: signal<number[]>([]),
     lastPerplexityTenPercentiles: signal<number[]>([]),
-    stdevTenPercentiles: signal<number[]>([]),
+    marginConfidenceTenPercentiles: signal<number[]>([]),
+    entropyTenPercentiles: signal<number[]>([]),
 
     attentionTargetToken,
     attentionTargetHead,
@@ -217,7 +217,6 @@ export default {
 
     hasGeneration,
 
-    maxTokens: signal<number>(256),
     paused: signal<boolean>(false),
     isGenerating: signal<boolean>(false),
     generationAbort: signal<AbortController>(),

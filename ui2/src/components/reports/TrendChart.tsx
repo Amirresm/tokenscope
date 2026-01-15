@@ -22,7 +22,8 @@ type DataPoint = {
     confidence: number;
     perplexity: number;
     lastPerplexity: number;
-    stdDev: number;
+    marginConfidence: number;
+    entropy: number;
     color: string;
 };
 
@@ -31,7 +32,13 @@ function Chart() {
 
     const currentGeneration = generationStore.currentGeneration.value;
 
-    const metrics = ["confidence", "perplexity", "lastPerplexity", "stdDev"];
+    const metrics = [
+        "confidence",
+        "perplexity",
+        "lastPerplexity",
+        "marginConfidence",
+        "entropy",
+    ];
 
     useLayoutEffect(() => {
         const root = am5.Root.new("chartdiv");
@@ -85,7 +92,9 @@ function Chart() {
         // Create series
         for (const m of metrics) {
             let yRenderer = am5xy.AxisRendererY.new(root, {
-                opposite: m.toLowerCase().includes("perplexity"),
+                opposite:
+                    m.toLowerCase().includes("perplexity") ||
+                    m.toLowerCase().includes("entropy"),
             });
             let yAxis = chart.yAxes.push(
                 am5xy.ValueAxis.new(root, {
@@ -278,13 +287,14 @@ function Chart() {
             const chart = chartRef.current;
 
             const data: DataPoint[] = currentGeneration.map((token) => ({
-                x: token.position + 1,
-                position: token.position,
+                x: token.position,
+                position: token.position + 1,
                 tokenString: visualizeWhitespace(token.token),
                 confidence: token.confidence || 0,
                 perplexity: token.perplexity || 0,
                 lastPerplexity: token.lastPerplexity || 0,
-                stdDev: token.std || 0,
+                marginConfidence: token.marginConfidence || 0,
+                entropy: token.entropy || 0,
                 color: "#10b981",
             }));
 

@@ -25,6 +25,8 @@ export type GenerationTokenData = {
     confidence: string;
     perplexity?: string;
     last_perplexity?: string;
+    margin_confidence?: string;
+    entropy?: string;
     position: number;
     token_time_ms: string;
     token_types: string[];
@@ -41,7 +43,8 @@ export type GenerationToken = {
     confidence: number;
     perplexity?: number;
     lastPerplexity?: number;
-    std?: number;
+    marginConfidence?: number;
+    entropy?: number;
 
     position: number;
     tokenTimeMs: number;
@@ -80,13 +83,6 @@ export function generationTokenFromData(
         ? data.alternative_tokens.map((token) => generationTokenFromData(token))
         : [];
     alternativeTokens.forEach((token) => (token.position = data.position));
-    const std = alternativeTokens.length
-        ? calculateStandardDeviation(
-              alternativeTokens.map((t) =>
-                  typeof t.confidence === "number" ? t.confidence : 0,
-              ),
-          )
-        : undefined;
 
     return {
         token: data.token_string,
@@ -99,7 +95,10 @@ export function generationTokenFromData(
         lastPerplexity: data.last_perplexity
             ? parseFloat(data.last_perplexity)
             : undefined,
-        std: std,
+        marginConfidence: data.margin_confidence
+            ? parseFloat(data.margin_confidence)
+            : undefined,
+        entropy: data.entropy ? parseFloat(data.entropy) : undefined,
         position: data.position,
         tokenTimeMs: parseFloat(data.token_time_ms),
         tokenTypes: tokenTypes,

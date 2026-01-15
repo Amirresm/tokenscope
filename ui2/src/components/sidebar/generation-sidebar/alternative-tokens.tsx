@@ -121,7 +121,7 @@ export default function AlternativeTokens({
                         dataKey="confidence"
                         radius={4}
                         onClick={handleClick}
-                        className="cursor-pointer fill-blue-500"
+                        className="cursor-pointer"
                     />
                 </BarChart>
             </div>

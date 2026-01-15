@@ -139,7 +139,7 @@ export function PromptInput() {
                     <input
                         type="number"
                         min={0}
-                        value={generationStore.maxTokens.value}
+                        value={generationStore.generationSettings.value.maxTokens}
                         onChange={(e) =>
                             generationStore.updateGenerationSettings({
                                 maxTokens: parseInt(e.target.value),

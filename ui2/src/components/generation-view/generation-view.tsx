@@ -44,10 +44,17 @@ function visualizeWhitespace(str: string) {
         .replace(/\n/g, "⏎\n"); // newline
 }
 
+type Metric =
+    | "confidence"
+    | "perplexity"
+    | "lastPerplexity"
+    | "marginConfidence"
+    | "entropy";
+
 type GenerationTokenProps = {
     generationToken: GenerationToken;
     colorVerbosity: "verbose" | "normal" | "none";
-    metric: "confidence" | "perplexity" | "lastPerplexity" | "std";
+    metric: Metric;
     metricPercetiles: number[];
     showLineInfo?: boolean;
     isSelected?: boolean;
@@ -77,7 +84,6 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         confidence,
         perplexity,
         lastPerplexity,
-        std,
         tokenTypes,
         prompt,
         manual,
@@ -99,9 +105,13 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         if (metric === "confidence") return confidence;
         if (metric === "perplexity") return perplexity || -1;
         if (metric === "lastPerplexity") return lastPerplexity || -1;
-        if (metric === "std") return std || -1;
+        if (metric === "marginConfidence")
+            return generationToken.marginConfidence === undefined
+                ? -1
+                : generationToken.marginConfidence;
+        if (metric === "entropy") return generationToken.entropy || -1;
         return -1;
-    }, [metric, confidence, perplexity, std]);
+    }, [metric, confidence, perplexity]);
 
     const textColor = React.useMemo(() => {
         if (metricValue === -1) return "text-gray-400";
@@ -111,9 +121,11 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
             if (tokenTypes.includes("prefix")) return "text-stone-400";
             return "text-gray-400";
         }
-        const reversed = !metric.toLowerCase().includes("perplexity")
-            ? false
-            : true;
+        const reversed =
+            metric.toLowerCase().includes("perplexity") ||
+            metric.toLowerCase().includes("entropy")
+                ? true
+                : false;
 
         const colorMap =
             colorVerbosity === "verbose"
@@ -242,7 +254,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
 type GenerationListProps = {
     generationList: GenerationToken[];
     colorVerbosity: "verbose" | "normal" | "none";
-    metric: "confidence" | "perplexity" | "lastPerplexity" | "std";
+    metric: Metric;
     metricPercetiles: number[];
     showLineInfo?: boolean;
     selectedTokenIndex?: number;
@@ -321,14 +333,28 @@ const GenerationView = () => {
     const specialTokenFilter =
         tokenLevelViewStore.config.value.specialTokenFilter;
 
-    const metricPercetiles =
-        metric === "confidence"
-            ? generationStore.confidenceTenPercentiles.value
-            : metric === "perplexity"
-              ? generationStore.perplexityTenPercentiles.value
-              : metric === "lastPerplexity"
-                ? generationStore.lastPerplexityTenPercentiles.value
-                : generationStore.stdevTenPercentiles.value;
+    let metricPercetiles: number[] = [];
+    switch (metric) {
+        case "confidence":
+            metricPercetiles = generationStore.confidenceTenPercentiles.value;
+            break;
+        case "perplexity":
+            metricPercetiles = generationStore.perplexityTenPercentiles.value;
+            break;
+        case "lastPerplexity":
+            metricPercetiles =
+                generationStore.lastPerplexityTenPercentiles.value;
+            break;
+        case "marginConfidence":
+            metricPercetiles =
+                generationStore.marginConfidenceTenPercentiles.value;
+            break;
+        case "entropy":
+            metricPercetiles = generationStore.entropyTenPercentiles.value;
+            break;
+        default:
+            metricPercetiles = [];
+    }
 
     const generationList = generationStore.currentGeneration.value;
     const selectedToken = generationStore.selectedToken.value;

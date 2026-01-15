@@ -86,7 +86,6 @@ const handleTokenGenerationStream = async (
     const confidenceDomain = [Infinity, -Infinity];
     const perplexityDomain = [Infinity, -Infinity];
     const lastPerplexityDomain = [Infinity, -Infinity];
-    const stdevDomain = [Infinity, -Infinity];
 
     for (const token of generationStore.currentGeneration.value) {
         if (token.confidence !== undefined && token.confidence >= 0) {
@@ -122,17 +121,14 @@ const handleTokenGenerationStream = async (
                 token.lastPerplexity,
             );
         }
-        if (token.std !== undefined) {
-            stdevDomain[0] = Math.min(stdevDomain[0], token.std);
-            stdevDomain[1] = Math.max(stdevDomain[1], token.std);
-        }
     }
 
     // get percentiles for metrics
     const confidencePercentiles: number[] = [];
     const perplexityPercentiles: number[] = [];
     const lastPerplexityPercentiles: number[] = [];
-    const stdevPercentiles: number[] = [];
+    const marginConfidencePercentiles: number[] = [];
+    const entropyPercentiles: number[] = [];
 
     for (let p = 0; p < 100; p += 20) {
         const confPerc = calcPercentile(
@@ -162,22 +158,30 @@ const handleTokenGenerationStream = async (
         if (lastPerpPerc !== null) {
             lastPerplexityPercentiles.push(lastPerpPerc);
         }
-        const stdPerc = calcPercentile(
-            generationStore.currentGeneration.value.filter(
-                (t) => !t.prompt && !t.manual,
-            ),
-            (t) => (t.std !== undefined ? t.std : 0),
+        const marginConfPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) => (t.marginConfidence !== undefined ? t.marginConfidence : 0),
             p,
         );
-        if (stdPerc !== null) {
-            stdevPercentiles.push(stdPerc);
+        if (marginConfPerc !== null) {
+            marginConfidencePercentiles.push(marginConfPerc);
+        }
+        const entropyPerc = calcPercentile(
+            generationStore.currentGeneration.value,
+            (t) => (t.entropy !== undefined ? t.entropy : 0),
+            p,
+        );
+        if (entropyPerc !== null) {
+            entropyPercentiles.push(entropyPerc);
         }
     }
     generationStore.confidenceTenPercentiles.value = confidencePercentiles;
     generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
     generationStore.lastPerplexityTenPercentiles.value =
         lastPerplexityPercentiles;
-    generationStore.stdevTenPercentiles.value = stdevPercentiles;
+    generationStore.marginConfidenceTenPercentiles.value =
+        marginConfidencePercentiles;
+    generationStore.entropyTenPercentiles.value = entropyPercentiles;
 
     generationStore.confidenceDomain.value = [
         confidenceDomain[0],
@@ -191,8 +195,6 @@ const handleTokenGenerationStream = async (
         lastPerplexityDomain[0],
         lastPerplexityDomain[1],
     ];
-    generationStore.stdevDomain.value = [stdevDomain[0], stdevDomain[1]];
-
     console.log("Stream finished");
     return;
 };
@@ -213,9 +215,9 @@ export async function generateNew(
             body: JSON.stringify({
                 prompt: prompt,
                 max_tokens: generationSettings.maxTokens,
-                topn: generationSettings.topN,
                 topk: generationSettings.topK,
-                coeff: generationSettings.coeff,
+                topp: generationSettings.topP,
+                coeff: parseFloat(generationSettings.coeff),
                 alternatives: generationSettings.alternatives,
                 attention_layer: generationSettings.attentionLayer,
                 attention_top_n: generationSettings.attentionTopN,
@@ -292,9 +294,9 @@ export async function continueGeneration(
                 branch_position: branchPosition,
                 appended_prompt: appendedPrompt,
                 max_tokens: generationSettings.maxTokens,
-                topn: generationSettings.topN,
                 topk: generationSettings.topK,
-                coeff: generationSettings.coeff,
+                topp: generationSettings.topP,
+                coeff: parseFloat(generationSettings.coeff),
                 alternatives: generationSettings.alternatives,
                 attention_layer: generationSettings.attentionLayer,
                 attention_top_n: generationSettings.attentionTopN,

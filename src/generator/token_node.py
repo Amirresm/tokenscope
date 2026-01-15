@@ -19,6 +19,8 @@ class Token:
     confidence: float
     perplexity: float | None
     last_perplexity: float | None
+    margin_confidence: float | None
+    entropy: float | None
     position: int  # or depth
 
     token_time_ms: float
@@ -35,6 +37,8 @@ class Token:
             "confidence": self.confidence,
             "perplexity": self.perplexity,
             "last_perplexity": self.last_perplexity,
+            "margin_confidence": self.margin_confidence,
+            "entropy": self.entropy,
             "position": self.position,
             "token_time_ms": self.token_time_ms,
             "token_types": [t for t in self.token_types],
@@ -68,11 +72,20 @@ class Token:
                 if self.last_perplexity is not None
                 else None
             ),
+            "margin_confidence": (
+                f"{self.margin_confidence:.6f}"
+                if self.margin_confidence is not None
+                else None
+            ),
+            "entropy": (
+                f"{self.entropy:.6f}" if self.entropy is not None else None
+            ),
             "position": self.position if self.position != -1 else None,
             "token_time_ms": f"{self.token_time_ms:.2f}",
             "token_types": self.token_types,
             "alternative_tokens": [
-                alt_token.to_dict() for alt_token in self.alternative_tokens
+                alt_token.to_dict_minify()
+                for alt_token in self.alternative_tokens
             ],
             "attention_snapshot": attention_snapshot,
         }
@@ -102,6 +115,8 @@ class Token:
             confidence=data["confidence"],
             perplexity=data.get("perplexity", None),
             last_perplexity=data.get("last_perplexity", None),
+            margin_confidence=data.get("margin_confidence", None),
+            entropy=data.get("entropy", None),
             position=data["position"],
             token_time_ms=data["token_time_ms"],
             token_types=data.get("token_types", []),

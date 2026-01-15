@@ -79,13 +79,12 @@ export function GenerationSettingsDropdown() {
                     <label className="input w-24">
                         <input
                             type="number"
+                            step="0.1"
                             value={generationSettings.coeff}
                             onChange={(e) =>
                                 handleSettingChange(
                                     "coeff",
-                                    e.target.value === ""
-                                        ? undefined
-                                        : parseInt(e.target.value),
+                                    e.target.value
                                 )
                             }
                         />

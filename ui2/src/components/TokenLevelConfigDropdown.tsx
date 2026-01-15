@@ -47,9 +47,14 @@ const metricOptions = [
         icon: <CrosshairIcon size={16} />,
     },
     {
-        label: TokenMetrics.std.label,
-        value: "std",
-        icon: <CrosshairSimpleIcon size={16} />,
+        label: TokenMetrics.marginConfidence.label,
+        value: "marginConfidence",
+        icon: <CrosshairIcon size={16} />,
+    },
+    {
+        label: TokenMetrics.entropy.label,
+        value: "entropy",
+        icon: <CrosshairIcon size={16} />,
     },
 ] as const;
 
@@ -84,7 +89,9 @@ export function TokenLevelConfigDropdown() {
             style={{ positionAnchor: "--anchor-1" }}
         >
             <div className="flex flex-col gap-2 text-sm">
-                <h3 className="px-4 mb-4 font-semibold text-lg">Token Level View Config</h3>
+                <h3 className="px-4 mb-4 font-semibold text-lg">
+                    Token Level View Config
+                </h3>
                 <div className="flex justify-between items-center px-4">
                     Color Verbosity
                     <MultiSwitch
