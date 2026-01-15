@@ -3,7 +3,6 @@ import typing
 
 import requests
 from websockets.sync.client import connect
-from rich import print as rprint
 
 from src.generator.generator import Generator, GeneratorItem
 from src.generator.token_node import Token
@@ -18,7 +17,13 @@ class GenClient(Generator):
         prompts: str | list[str],
         prompts_tokens: list[list[Token]] | None = None,
         max_tokens=None,
+        topk=1,
+        topp=1,
+        coeff=1.0,
+        alternatives=5,
         record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]:
         with connect(self.url) as websocket:
@@ -33,7 +38,13 @@ class GenClient(Generator):
                     else None
                 ),
                 "max_tokens": max_tokens,
+                "topk": topk,
+                "topp": topp,
+                "coeff": coeff,
+                "alternatives": alternatives,
                 "record_attention": record_attention,
+                "attention_layer": attention_layer,
+                "attention_top_n": attention_top_n,
                 "log_metric": log_metric,
             }
             websocket.send(json.dumps(init_message))

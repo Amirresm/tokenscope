@@ -41,16 +41,10 @@ class OpenAIGenerator(Generator):
         model_name,
         model_hf_id,
         default_max_tokens=50,
-        topk=1,
-        force_greedy=False,
-        thr=0.75,
         stop_tokens=[],
     ):
         self.default_max_tokens = default_max_tokens
         self.max_tokens = default_max_tokens
-        self.topk = topk
-        self.force_greedy = force_greedy
-        self.thr = thr
         self.stop_tokens = stop_tokens
         self.num_sample_history = []
         self.time_history = []
@@ -86,7 +80,12 @@ class OpenAIGenerator(Generator):
         prompts: str | list[str],
         prompts_tokens: list[list[Token]] | None = None,
         max_tokens=None,
+        topn=1,
+        topk=1,
+        alternatives=5,
         record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]:
         self.max_tokens = max_tokens or self.default_max_tokens

@@ -18,7 +18,13 @@ class Generator(Protocol):
         prompts: str | list[str],
         prompts_tokens: list[list[Token]] | None = None,
         max_tokens=None,
+        topk=1,
+        topp=0,
+        coeff=1.0,
+        alternatives=5,
         record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]: ...
 

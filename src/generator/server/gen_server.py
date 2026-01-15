@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import json
 
-from fastapi.websockets import WebSocketDisconnect, WebSocketState
+from fastapi.websockets import WebSocketDisconnect
 from rich import print as rprint
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,13 +92,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 else None
             )
             max_tokens = payload.get("max_tokens", None)
+            topk = payload.get("topk", 1)
+            topp = payload.get("topp", 1)
+            coeff = payload.get("coeff", 1.0)
+            alternatives = payload.get("alternatives", 5)
             record_attention = payload.get("record_attention", None)
+            attaention_layer = payload.get("attention_layer", -1)
+            attention_top_n = payload.get("attention_top_n", 10)
             log_metric = payload.get("log_metric", False)
 
             for batch in provider.generate_yield(
                 prompts=prompt,
                 prompts_tokens=prompts_tokens,
                 max_tokens=max_tokens,
+                topk=topk,
+                topp=topp,
+                coeff=coeff,
+                alternatives=alternatives,
+                attention_layer=attaention_layer,
+                attention_top_n=attention_top_n,
                 record_attention=record_attention,
                 log_metric=log_metric,
             ):

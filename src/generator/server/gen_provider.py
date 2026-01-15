@@ -44,7 +44,7 @@ class GeneratorProvider:
         self.generator = BatchGenerator(
             wrapper,
             stop_tokens=[ControlTokenTypes.EOS],
-            topk=5,
+            topp=5,
             force_greedy=True,
         )
         self.model_source = ModelSource.TRANSFORMERS
@@ -76,18 +76,30 @@ class GeneratorProvider:
         prompts: str | list[str],
         prompts_tokens=None,
         max_tokens=None,
+        topk=1,
+        topp=1,
+        coeff=1.0,
+        alternatives=5,
         record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         log_metric=False,
     ):
         if self.generator is None:
             raise ValueError("Generator model is not set.")
 
         yield from self.generator.generate_yield(
-            prompts,
-            prompts_tokens,
-            max_tokens,
-            record_attention,
-            log_metric,
+            prompts=prompts,
+            prompts_tokens=prompts_tokens,
+            max_tokens=max_tokens,
+            topk=topk,
+            topp=topp,
+            coeff=coeff,
+            alternatives=alternatives,
+            record_attention=record_attention,
+            attention_layer=attention_layer,
+            attention_top_n=attention_top_n,
+            log_metric=log_metric,
         )
 
     def prompts_to_token(self, prompts: list[str]):

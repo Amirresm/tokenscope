@@ -7,6 +7,32 @@ import {
 const currentGeneration = signal<GenerationToken[]>([]);
 const hasGeneration = computed(() => currentGeneration.value.length > 0);
 
+export type GenerationSettings = {
+    maxTokens: number;
+    topK: number;
+    topP: number;
+    coeff: number;
+    alternatives: number;
+    attentionLayer: number;
+    attentionTopN: number;
+};
+const generationSettings = signal<GenerationSettings>({
+    maxTokens: 256,
+    topK: 1,
+    topP: 0,
+    coeff: 1.0,
+    alternatives: 5,
+    attentionLayer: -1,
+    attentionTopN: 10,
+});
+
+const updateGenerationSettings = (newSettings: Partial<GenerationSettings>) => {
+    generationSettings.value = {
+        ...generationSettings.value,
+        ...newSettings,
+    };
+};
+
 function clearGeneration() {
     currentGeneration.value = [];
 }
@@ -160,6 +186,9 @@ const clearAttentionTargetToken = () => {
 };
 
 export default {
+    generationSettings,
+    updateGenerationSettings,
+
     currentGeneration,
     clearGeneration,
     appendToGeneration,
@@ -188,8 +217,7 @@ export default {
 
     hasGeneration,
 
-    attnLayer: signal<number | undefined>(undefined),
-    maxTokens: signal<number>(200),
+    maxTokens: signal<number>(256),
     paused: signal<boolean>(false),
     isGenerating: signal<boolean>(false),
     generationAbort: signal<AbortController>(),

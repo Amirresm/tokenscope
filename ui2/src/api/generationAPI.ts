@@ -3,7 +3,7 @@ import {
     GenerationTokenData,
     generationTokenFromData,
 } from "../models/generationToken";
-import generationStore from "../store/generationStore";
+import generationStore, { GenerationSettings } from "../store/generationStore";
 import sessionStore from "../store/sessionStore";
 import { calcPercentile } from "../utils/calcPercentile";
 import { API_BASE_URL } from "./constants";
@@ -199,8 +199,7 @@ const handleTokenGenerationStream = async (
 
 export async function generateNew(
     prompt: string,
-    maxTokens: number = 200,
-    attnLayer: number | null = null,
+    generationSettings: GenerationSettings,
     handleData: (data: GenerationToken) => void,
     onComplete?: () => void,
     abortSignal?: AbortController,
@@ -213,8 +212,13 @@ export async function generateNew(
             },
             body: JSON.stringify({
                 prompt: prompt,
-                max_tokens: maxTokens,
-                attn_layer: attnLayer,
+                max_tokens: generationSettings.maxTokens,
+                topn: generationSettings.topN,
+                topk: generationSettings.topK,
+                coeff: generationSettings.coeff,
+                alternatives: generationSettings.alternatives,
+                attention_layer: generationSettings.attentionLayer,
+                attention_top_n: generationSettings.attentionTopN,
             }),
             signal: abortSignal?.signal,
         });
@@ -270,9 +274,8 @@ export async function continueGeneration(
     branchId: string,
     branchPosition: number,
     appendedPrompt: string = "",
-    maxTokens: number = 200,
+    generationSettings: GenerationSettings,
     resumeOldBranch: boolean = false,
-    attnLayer: number | null = null,
     handleData: (data: GenerationToken) => void,
     onComplete?: () => void,
     abortSignal?: AbortController,
@@ -288,9 +291,14 @@ export async function continueGeneration(
                 branch_id: branchId,
                 branch_position: branchPosition,
                 appended_prompt: appendedPrompt,
-                max_tokens: maxTokens,
+                max_tokens: generationSettings.maxTokens,
+                topn: generationSettings.topN,
+                topk: generationSettings.topK,
+                coeff: generationSettings.coeff,
+                alternatives: generationSettings.alternatives,
+                attention_layer: generationSettings.attentionLayer,
+                attention_top_n: generationSettings.attentionTopN,
                 resume_old_branch: resumeOldBranch,
-                attn_layer: attnLayer,
             }),
             signal: abortSignal?.signal,
         });

@@ -2,13 +2,12 @@ import React from "react";
 import "./generation-sidebar.css";
 import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import AlternativeTokens from "./alternative-tokens";
-import FimPanel from "./fim-panel";
 import { GenerationToken } from "../../../models/generationToken";
 import sessionStore from "../../../store/sessionStore";
 import generationStore from "../../../store/generationStore";
 import { continueGeneration } from "../../../api/generationAPI";
 
-type GenerationMode = "continue" | "fim";
+// type GenerationMode = "continue" | "fim";
 
 const colorMap = {
     0: "text-red-300",
@@ -77,8 +76,8 @@ export function Content({ token }: { token: GenerationToken }) {
     const branchId = sessionStore.branchId.value;
 
     const [substituteToken, setSubstituteToken] = React.useState("");
-    const [generationMode, setGenerationMode] =
-        React.useState<GenerationMode>("continue");
+    // const [generationMode, setGenerationMode] =
+    //     React.useState<GenerationMode>("continue");
 
     const handleSubstituteTokenChange = React.useCallback(
         (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -105,9 +104,8 @@ export function Content({ token }: { token: GenerationToken }) {
                 branchId,
                 token.position,
                 tokens,
-                generationStore.maxTokens.value,
+                generationStore.generationSettings.value,
                 false,
-                generationStore.attnLayer.value,
                 generationStore.appendToGeneration,
                 undefined,
                 generationStore.generationAbort.value,
@@ -249,24 +247,38 @@ export function Content({ token }: { token: GenerationToken }) {
                 {/* </button> */}
                 Replace Token With
             </div>
-            {generationMode === "continue" ? (
-                <div className="flex flex-col gap-2">
-                    <textarea
-                        className="input p-2"
-                        placeholder="Enter token (or tokens) to substitute"
-                        value={substituteToken}
-                        onChange={handleSubstituteTokenChange}
-                    />
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => handleSubstituteToken(substituteToken)}
-                    >
-                        Replace Token
-                    </button>
-                </div>
-            ) : generationMode === "fim" ? (
-                <FimPanel />
-            ) : null}
+            {/* {generationMode === "continue" ? ( */}
+            {/*     <div className="flex flex-col gap-2"> */}
+            {/*         <textarea */}
+            {/*             className="input p-2" */}
+            {/*             placeholder="Enter token (or tokens) to substitute" */}
+            {/*             value={substituteToken} */}
+            {/*             onChange={handleSubstituteTokenChange} */}
+            {/*         /> */}
+            {/*         <button */}
+            {/*             className="btn btn-primary" */}
+            {/*             onClick={() => handleSubstituteToken(substituteToken)} */}
+            {/*         > */}
+            {/*             Replace Token */}
+            {/*         </button> */}
+            {/*     </div> */}
+            {/* ) : generationMode === "fim" ? ( */}
+            {/*     <FimPanel /> */}
+            {/* ) : null} */}
+            <div className="flex flex-col gap-2">
+                <textarea
+                    className="input p-2"
+                    placeholder="Enter token (or tokens) to substitute"
+                    value={substituteToken}
+                    onChange={handleSubstituteTokenChange}
+                />
+                <button
+                    className="btn btn-primary"
+                    onClick={() => handleSubstituteToken(substituteToken)}
+                >
+                    Replace Token
+                </button>
+            </div>
         </div>
     );
 }

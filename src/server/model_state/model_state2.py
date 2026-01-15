@@ -166,6 +166,13 @@ class ModelState:
         self,
         prompt: str,
         max_tokens: int,
+        topk=1,
+        topp=0,
+        coeff=1.0,
+        alternatives=5,
+        record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         branch_id: str | None = None,
         should_stop: Callable[[], Awaitable[bool]] | None = None,
     ):
@@ -197,10 +204,16 @@ class ModelState:
             print("Starting generation ...")
             # self.batch_generator.reset()
             for batch in self.batch_generator.generate_yield(
-                prompt,
+                prompts=prompt,
                 max_tokens=max_tokens,
+                topk=topk,
+                topp=topp,
+                coeff=coeff,
+                alternatives=alternatives,
+                record_attention=record_attention,
+                attention_layer=attention_layer,
+                attention_top_n=attention_top_n,
                 log_metric=True,
-                record_attention=True,
             ):
                 step = batch[0]
                 if should_stop and await should_stop():
@@ -233,6 +246,13 @@ class ModelState:
         branch_position: int,
         appended_prompt: str,
         max_tokens: int,
+        topk=1,
+        topp=0,
+        coeff=1.0,
+        alternatives=5,
+        record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         resume_old_branch: bool = False,
         should_stop: Callable[[], Awaitable[bool]] | None = None,
     ):
@@ -318,11 +338,17 @@ class ModelState:
             print("Starting generation ...")
             # self.batch_generator.reset()
             for batch in self.batch_generator.generate_yield(
-                "",  # ignored
+                prompts="",
                 prompts_tokens=prompt,
                 max_tokens=max_tokens,
+                topk=topk,
+                topp=topp,
+                coeff=coeff,
+                alternatives=alternatives,
+                record_attention=record_attention,
+                attention_layer=attention_layer,
+                attention_top_n=attention_top_n,
                 log_metric=True,
-                record_attention=True,
             ):
                 step = batch[0]
                 if not step.fresh:

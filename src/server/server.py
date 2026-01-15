@@ -129,7 +129,13 @@ async def get_ast(
 async def generate(request: fastapi.Request, request_data: dict):
     prompt = request_data["prompt"]
     max_tokens = request_data.get("max_tokens", 200)
-    attn_layer = request_data.get("attn_layer", None)
+    topk = request_data.get("topk", 1)
+    topp = request_data.get("topp", 0)
+    coeff = request_data.get("coeff", 1.0)
+    alternatives = request_data.get("alternatives", 5)
+    attention_layer = request_data.get("attention_layer", -1)
+    attention_top_n = request_data.get("attention_top_n", 10)
+    record_attention = attention_top_n > 0
 
     model_state = typing.cast(ModelState, request.state.model_state)
     # model_state.generator.set_attn_layer(attn_layer)
@@ -140,6 +146,13 @@ async def generate(request: fastapi.Request, request_data: dict):
         model_state.generate_new(
             prompt=prompt,
             max_tokens=max_tokens,
+            topk=topk,
+            topp=topp,
+            coeff=coeff,
+            alternatives=alternatives,
+            record_attention=record_attention,
+            attention_layer=attention_layer,
+            attention_top_n=attention_top_n,
             should_stop=request.is_disconnected,
         ),
         headers=headers,
@@ -155,7 +168,13 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
     appended_prompt = request_data.get("appended_prompt", "")
     max_tokens = request_data.get("max_tokens", 200)
     resume_old_branch = request_data.get("resume_old_branch", False)
-    attn_layer = request_data.get("attn_layer", None)
+    topk = request_data.get("topk", 1)
+    topp = request_data.get("topp", 1)
+    coeff = request_data.get("coeff", 1.0)
+    alternatives = request_data.get("alternatives", 5)
+    attention_layer = request_data.get("attention_layer", -1)
+    attention_top_n = request_data.get("attention_top_n", 10)
+    record_attention = attention_top_n > 0
 
     model_state = typing.cast(ModelState, request.state.model_state)
     # model_state.generator.set_attn_layer(attn_layer)
@@ -169,6 +188,13 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
             branch_position=branch_position,
             appended_prompt=appended_prompt,
             max_tokens=max_tokens,
+            topk=topk,
+            topp=topp,
+            coeff=coeff,
+            alternatives=alternatives,
+            record_attention=record_attention,
+            attention_layer=attention_layer,
+            attention_top_n=attention_top_n,
             resume_old_branch=resume_old_branch,
             should_stop=request.is_disconnected,
         ),

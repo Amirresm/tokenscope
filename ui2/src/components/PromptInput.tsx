@@ -4,12 +4,15 @@ import generationStore from "../store/generationStore";
 import sessionStore from "../store/sessionStore";
 import { continueGeneration, generateNew } from "../api/generationAPI";
 import drawerStore, { DrawerTabsEnum } from "../store/components/drawerStore";
-import { RobotIcon } from "@phosphor-icons/react";
+import { GearIcon, RobotIcon } from "@phosphor-icons/react";
 import { useCurrentModelQuery } from "../hooks/current-model-query";
+import { GenerationSettingsDropdown } from "./GenerationSettingsDropdown";
 
 export function PromptInput() {
     const sessionId = sessionStore.sessionId.value;
     const branchId = sessionStore.branchId.value;
+
+    const generationSettings = generationStore.generationSettings.value;
 
     const [value, setValue] = React.useState("");
 
@@ -47,9 +50,8 @@ export function PromptInput() {
                 branchId,
                 lastTokenIndex,
                 undefined,
-                generationStore.maxTokens.value,
+                generationStore.generationSettings.value,
                 true,
-                generationStore.attnLayer.value,
                 generationStore.appendToGeneration,
                 undefined,
                 generationStore.generationAbort.value,
@@ -59,8 +61,7 @@ export function PromptInput() {
             generationStore.generationAbort.value = new AbortController();
             await generateNew(
                 value,
-                generationStore.maxTokens.value,
-                generationStore.attnLayer.value,
+                generationStore.generationSettings.value,
                 generationStore.appendToGeneration,
                 undefined,
                 generationStore.generationAbort.value,
@@ -105,22 +106,34 @@ export function PromptInput() {
             />
             <div className="flex gap-2 mt-4 items-center">
                 <div className="grow" />
-                <label className="input w-40">
-                    <span className="text-gray-500">Attention Layer</span>
-                    <input
-                        type="number"
-                        value={generationStore.attnLayer.value}
-                        onChange={(e) => {
-                            if (e.target.value === "") {
-                                generationStore.attnLayer.value = undefined;
-                            } else {
-                                generationStore.attnLayer.value = parseInt(
-                                    e.target.value,
-                                );
-                            }
+                <div className="dropdown dropdown-top">
+                    <button
+                        className="btn"
+                        popoverTarget="popover-1"
+                        style={{
+                            anchorName: "--anchor-1",
                         }}
-                    />
-                </label>
+                    >
+                        <GearIcon />
+                    </button>
+                    <GenerationSettingsDropdown />
+                </div>
+                {/* <label className="input w-40"> */}
+                {/*     <span className="text-gray-500">Attention Layer</span> */}
+                {/*     <input */}
+                {/*         type="number" */}
+                {/*         value={generationStore.attnLayer.value} */}
+                {/*         onChange={(e) => { */}
+                {/*             if (e.target.value === "") { */}
+                {/*                 generationStore.attnLayer.value = undefined; */}
+                {/*             } else { */}
+                {/*                 generationStore.attnLayer.value = parseInt( */}
+                {/*                     e.target.value, */}
+                {/*                 ); */}
+                {/*             } */}
+                {/*         }} */}
+                {/*     /> */}
+                {/* </label> */}
                 <label className="input w-40">
                     <span className="text-gray-500">Max Tokens</span>
                     <input
@@ -128,9 +141,9 @@ export function PromptInput() {
                         min={0}
                         value={generationStore.maxTokens.value}
                         onChange={(e) =>
-                            (generationStore.maxTokens.value = parseInt(
-                                e.target.value,
-                            ))
+                            generationStore.updateGenerationSettings({
+                                maxTokens: parseInt(e.target.value),
+                            })
                         }
                     />
                 </label>

@@ -1,4 +1,3 @@
-import { fetchCurrentModel } from "../../api/llmManagementAPI";
 import sessionStore from "../../store/sessionStore";
 import { GearIcon, RobotIcon, TreeStructureIcon } from "@phosphor-icons/react";
 import { TokenLevelConfigDropdown } from "../TokenLevelConfigDropdown";

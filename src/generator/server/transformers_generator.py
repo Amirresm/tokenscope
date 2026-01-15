@@ -35,7 +35,7 @@ class BatchGenerator(Generator):
         self,
         model: ModelWrapper,
         default_max_tokens=50,
-        topk=1,
+        topp=1,
         force_greedy=False,
         thr=0.75,
         stop_tokens=[],
@@ -44,9 +44,6 @@ class BatchGenerator(Generator):
         self.default_max_tokens = default_max_tokens
         self.max_tokens = default_max_tokens
 
-        self.topk = topk
-        self.force_greedy = force_greedy
-        self.thr = thr
         self.stop_tokens = stop_tokens
         self.device = self.model.m.device
 
@@ -67,7 +64,13 @@ class BatchGenerator(Generator):
         prompts: str | list[str],
         prompts_tokens: list[list[Token]] | None = None,
         max_tokens=None,
+        topk=1,
+        topp=0,
+        coeff=1.0,
+        alternatives=5,
         record_attention: bool = False,
+        attention_layer=-1,
+        attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]:
         old_padding_side = self.model.t.padding_side
@@ -115,6 +118,12 @@ class BatchGenerator(Generator):
                         batch_size=batch_size,
                         past_key_values=past_key_values,
                         record_attention=record_attention,
+                        topk=topk,
+                        topp=topp,
+                        coeff=coeff,
+                        alternatives=alternatives,
+                        attention_layer=attention_layer,
+                        attention_top_n=attention_top_n,
                         index=i + input_ids.shape[1],
                     )
                 )
@@ -282,9 +291,15 @@ class BatchGenerator(Generator):
         self,
         input_ids,
         attention_mask,
-        batch_size,
+        batch_size: int,
         past_key_values,
-        record_attention,
+        record_attention: bool,
+        topk: int,
+        topp: int,
+        coeff: float,
+        alternatives: int,
+        attention_layer: int,
+        attention_top_n: int,
         index: int,
     ):
         model_start_time = time.perf_counter_ns()
@@ -309,7 +324,12 @@ class BatchGenerator(Generator):
         )
 
         results, new_ids = self._process_logits(
-            logits, batch_size, topn=self.topk, coeff=1
+            logits,
+            batch_size,
+            topk=topk,
+            topp=topp,
+            coeff=coeff,
+            alternatives=alternatives,
         )
 
         if record_attention:
@@ -332,7 +352,11 @@ class BatchGenerator(Generator):
 
         attention_results = None
         if record_attention and output.attentions is not None:
-            attention_results = self.record_attentions(output.attentions)
+            attention_results = self.record_attentions(
+                output.attentions,
+                attn_layer=attention_layer,
+                attn_top_n=attention_top_n,
+            )
 
         step_tokens = []
         for batch_index, result in enumerate(results):
@@ -386,16 +410,13 @@ class BatchGenerator(Generator):
         batch_size, seq_len = target_ids.shape
         device = logits.device
 
-        # ---------
-        # CASE 1: sequence length >= 2 (standard perplexity)
-        # ---------
         if seq_len > 1:
             shift_logits = logits[:, :-1, :].contiguous()
             shift_labels = target_ids[:, 1:].contiguous()
             shift_mask = attention_mask[:, 1:].contiguous()
 
-            if self.model.t.pad_token is not None and isinstance(
-                self.model.t.pad_token, str
+            if self.model.t.pad_token_id is not None and isinstance(
+                self.model.t.pad_token_id, str
             ):
                 pad_token_id = int(self.model.t.pad_token_id)
             else:
@@ -429,9 +450,6 @@ class BatchGenerator(Generator):
                 float(token_ppl.mean().detach().cpu().float().item()),
             )
 
-        # ---------
-        # CASE 2: sequence length == 1 (streaming / incremental)
-        # ---------
         else:
             # Only token-level surprisal is defined
             logits_t = logits[:, -1, :]  # (batch, vocab)
@@ -467,8 +485,10 @@ class BatchGenerator(Generator):
         self,
         logits: torch.Tensor,
         batch_size: int,
-        topn: int = 1,
-        coeff: float = 1.0,
+        alternatives: int,
+        topk: int,
+        topp: int,
+        coeff: float,
     ) -> tuple[list[tuple[int, float, list[int], list[float]]], torch.Tensor]:
         new_ids = torch.zeros(
             (batch_size, 1), dtype=torch.int64, device=self.device
@@ -479,20 +499,44 @@ class BatchGenerator(Generator):
         )  # shape: (batch_size, vocab_size)
 
         probs, indices = torch.topk(
-            sf, topn, dim=-1
-        )  # shape: (batch_size, topn)
+            sf, topk, dim=-1
+        )  # shape: (batch_size, topk)
         probs = probs.detach().cpu().to(torch.float32).numpy()
         indices = indices.detach().cpu().numpy()
 
+        at_probs, at_indices = torch.topk(
+            sf, alternatives, dim=-1
+        )  # shape: (batch_size, alternatives)
+        at_probs = at_probs.detach().cpu().to(torch.float32).numpy()
+        at_indices = at_indices.detach().cpu().numpy()
+
         results = []
         for i in range(batch_size):
+            at_p = at_probs[i]
+            at_idx = at_indices[i]
+            at_p = at_p / at_p.sum()
+
             p = probs[i]
             idx = indices[i]
-            p = p / p.sum()  # normalize
-            if self.force_greedy:
+            p = p / p.sum()
+
+            if topp > 0:
+                filtered_p = []
+                filtered_idx = []
+                for prob, index in zip(p, idx):
+                    if prob >= topp:
+                        filtered_p.append(prob)
+                        filtered_idx.append(index)
+                if len(filtered_p) == 0:
+                    filtered_p = p[0:1]
+                    filtered_idx = idx[0:1]
+                p = np.array(filtered_p)
+                idx = np.array(filtered_idx)
+
+            if topp == 1:
                 chosen_index = 0
             else:
-                chosen_index = np.random.choice(topn, p=p)
+                chosen_index = np.random.choice(topk, p=p)
             new_ids[i, 0] = idx[chosen_index]
             token_id = int(idx[chosen_index])
             confidence = float(p[chosen_index])
@@ -501,16 +545,16 @@ class BatchGenerator(Generator):
                 (
                     token_id,
                     confidence,
-                    typing.cast(list[int], idx.tolist()),
-                    p.tolist(),
+                    typing.cast(list[int], at_idx.tolist()),
+                    at_p.tolist(),
                 )
             )
 
         return results, new_ids
 
-    def record_attentions(self, attention: tuple[torch.Tensor]):
-        attn_layer = -1
-        attn_top_n = 50
+    def record_attentions(
+        self, attention: tuple[torch.Tensor], attn_layer=-1, attn_top_n=10
+    ):
         attn_layer = min(len(attention) - 1, attn_layer or 0)
         last_layer_attention = attention[attn_layer]  # (B, H, T, S)
 
