@@ -65,7 +65,8 @@ export function AstPage() {
                 {source ? (
                     <>
                         <div className="m-4 p-4 rounded-lg bg-base-200">
-                            Select a range to view Atomic Blocks
+                            Select a range by highlighting text below to analyze
+                            AST structure.
                         </div>
                         <RangeSelector
                             source={source}

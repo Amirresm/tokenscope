@@ -11,14 +11,20 @@ const SessionSidebar = () => {
 
     const isGenerating = generationStore.isGenerating.value;
 
-    const handleSessionChange = React.useCallback((sessionId: string) => {
-        sessionStore.setSessionId(sessionId);
-        sessionStore.setBranchId(null);
-    }, []);
+    const sessionQuery = useQuery({
+        queryKey: ["sessions"],
+        queryFn: () => fetchSessions(),
+    });
 
-    const handleBranchChange = React.useCallback(
-        async (branchId: string) => {
-            sessionStore.setBranchId(branchId);
+    const branchQuery = useQuery({
+        queryKey: ["branches", sessionId],
+        queryFn: () =>
+            sessionId ? fetchSessionBranches(sessionId) : Promise.resolve([]),
+        enabled: !!sessionId,
+    });
+
+    const handlePrefillGeneration = React.useCallback(
+        async (sessionId: string, branchId: string) => {
             // If generation is already in progress, pause
             if (isGenerating) {
                 generationStore.generationAbort.value?.abort();
@@ -43,20 +49,29 @@ const SessionSidebar = () => {
 
             generationStore.isGenerating.value = false;
         },
-        [sessionId, isGenerating],
+        [isGenerating],
     );
 
-    const sessionQuery = useQuery({
-        queryKey: ["sessions"],
-        queryFn: () => fetchSessions(),
-    });
+    const handleSessionChange = React.useCallback(
+        async (sessionId: string) => {
+            sessionStore.setSessionId(sessionId);
+            const branches = await fetchSessionBranches(sessionId);
+            if (branches && branches.length > 0) {
+                const lastBranch = branches[branches.length - 1];
+                sessionStore.setBranchId(lastBranch);
+                await handlePrefillGeneration(sessionId, lastBranch);
+            }
+        },
+        [branchQuery.data],
+    );
 
-    const branchQuery = useQuery({
-        queryKey: ["branches", sessionId],
-        queryFn: () =>
-            sessionId ? fetchSessionBranches(sessionId) : Promise.resolve([]),
-        enabled: !!sessionId,
-    });
+    const handleBranchChange = React.useCallback(
+        async (branchId: string) => {
+            sessionStore.setBranchId(branchId);
+            await handlePrefillGeneration(sessionId!, branchId);
+        },
+        [sessionId],
+    );
 
     return (
         <div className="w-full h-full flex flex-col">

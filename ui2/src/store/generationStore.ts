@@ -99,7 +99,7 @@ const updateFimIndices = (index: number) => {
     }
 };
 
-const attentionTargetHead = signal<string | undefined>(undefined);
+const attentionTargetHead = signal<string | undefined>("mean");
 const attentionTargetToken = signal<GenerationToken | null>(null);
 const attentionVisibleRange = signal<[number, number]>([0, 1]);
 
@@ -150,6 +150,14 @@ const setAttentionTargetToken = (token: GenerationToken) => {
         updateAttentionTargetToken(attentionTargetHead.value, token);
     }
 };
+const clearAttentionTargetToken = () => {
+    attentionTargetToken.value = null;
+    attentionVisibleRange.value = [0, 1];
+    currentGeneration.value = currentGeneration.value.map((t) => {
+        t.relativeAttention = undefined;
+        return t;
+    });
+};
 
 export default {
     currentGeneration,
@@ -176,6 +184,7 @@ export default {
     setAttentionTargetToken,
     setAttentionTargetHead,
     updateAttentionTargetToken,
+    clearAttentionTargetToken,
 
     hasGeneration,
 

@@ -5,7 +5,7 @@ import { GenerationTokenData } from "../../models/generationToken";
 import { getUniqueColor } from "../../utils/unqiueColorGenerator";
 import generationStore from "../../store/generationStore";
 import globalStore from "../../store/components/globalStore";
-import { ViewModesEnum } from "../../store/components/astStore";
+import astStore, { ViewModesEnum } from "../../store/components/astStore";
 
 function visualizeWhitespace(str: string) {
     return str;
@@ -57,13 +57,18 @@ export function GenericAstView({
     astTokens,
     groupingMode,
 }: GenericAstViewProps) {
-    const tokenList = React.useMemo(() => {
+    const currentGeneration = generationStore.currentGeneration.value;
+
+    const groups = React.useMemo(() => {
         const groups: {
+            index: number;
+            id: string;
             tokens: GenerationTokenData[];
             group: string;
             averageConfidence: number;
         }[] = [];
-        for (const tokenInfo of astTokens) {
+        for (let i = 0; i < astTokens.length; i++) {
+            const tokenInfo = astTokens[i];
             let groupKey = "";
             switch (groupingMode) {
                 case ViewModesEnum.Type:
@@ -99,6 +104,8 @@ export function GenericAstView({
                 }
 
                 groups.push({
+                    index: i,
+                    id: `${i}|${groupKey}`,
                     tokens: [tokenInfo.token],
                     group: groupKey,
                     averageConfidence: 0,
@@ -119,9 +126,13 @@ export function GenericAstView({
         return groups;
     }, [astTokens, groupingMode]);
 
+    React.useEffect(() => {
+        astStore.astGroups.value = groups;
+    }, [groups]);
+
     return (
         <div className="min-h-0 grow overflow-y-auto whitespace-pre-wrap p-4">
-            {tokenList.map((t, index) => (
+            {groups.map((t, index) => (
                 <span
                     data-content={`#${index}: ${t.group}`}
                     className={`atomic-block ${getConfidenceColorClass(

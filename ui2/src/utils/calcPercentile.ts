@@ -4,17 +4,21 @@ export function calcPercentile<T>(
     percentile: number,
 ): number | null {
     if (data.length === 0) return null;
-    const sorted = data
+
+    // Clamp percentile to [0, 100]
+    const p = Math.min(100, Math.max(0, percentile));
+
+    // Extract and sort numeric values
+    const values = data
         .map(accessor)
-        .filter((v) => !isNaN(v))
+        .filter(v => Number.isFinite(v))
         .sort((a, b) => a - b);
-    const index = (percentile / 100) * (sorted.length - 1);
-    if (Number.isInteger(index)) {
-        return sorted[index];
-    } else {
-        const lowerIndex = Math.floor(index);
-        const upperIndex = Math.ceil(index);
-        const weight = index - lowerIndex;
-        return sorted[lowerIndex] * (1 - weight) + sorted[upperIndex] * weight;
-    }
+
+    if (values.length === 0) return null;
+
+    // Nearest-rank method
+    const rank = Math.ceil((p / 100) * values.length) - 1;
+    const index = Math.min(Math.max(rank, 0), values.length - 1);
+
+    return values[index];
 }

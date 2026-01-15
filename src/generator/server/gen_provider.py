@@ -39,7 +39,7 @@ class GeneratorProvider:
             )
         )
         assert Wrapper is not None, f"Unsupported model: {model_name_or_path}"
-        wrapper = Wrapper(model_name_or_path, q4bit=False)
+        wrapper = Wrapper(model_name_or_path, q4bit=False, device="cuda")
 
         self.generator = BatchGenerator(
             wrapper,

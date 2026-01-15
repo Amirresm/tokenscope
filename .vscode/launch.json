@@ -7,7 +7,15 @@
             "module": "main",
             "request": "launch",
             "console": "integratedTerminal",
-            "args": ["server"]
+            "args": ["-s", "1"]
+        },
+        {
+            "name": "Python: gen server",
+            "type": "debugpy",
+            "module": "main",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "args": ["-g", "1"]
         }
     ]
 }

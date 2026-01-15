@@ -33,39 +33,10 @@ function visualizeWhitespace(str: string) {
         .replace(/\n/g, "⏎\n"); // newline
 }
 
-export function Content({ token }: { token: GenerationToken }) {
-    const sessionId = sessionStore.sessionId.value;
-    const branchId = sessionStore.branchId.value;
-
-    const [substituteToken, setSubstituteToken] = React.useState("");
-    const [generationMode, setGenerationMode] =
-        React.useState<GenerationMode>("continue");
-
+function Navigation({ token }: { token: GenerationToken }) {
     const currentGeneration = generationStore.currentGeneration.value;
     const nextToken = generationStore.nextToken.value;
     const prevToken = generationStore.previousToken.value;
-
-    const attentionTargetToken = generationStore.attentionTargetToken.value;
-    const attentionTargetHead = generationStore.attentionTargetHead.value;
-
-    // const attentionTargetHeadCount =
-    //     currentGeneration.find(
-    //         (t) =>
-    //             t.attentionSnapshot?.length && t.attentionSnapshot.length > 0,
-    //     )?.attentionSnapshot?.length || 0;
-    // const attentionTargetHeadOptions = [
-    //     ...Array(attentionTargetHeadCount).keys(),
-    // ];
-    const attentionTargetHeadOptions = React.useMemo(() => {
-        if (currentGeneration.length === 0) return [];
-        const firstWithAttention = currentGeneration.find(
-            (t) =>
-                t.attentionSnapshot &&
-                Object.keys(t.attentionSnapshot).length > 0,
-        );
-        if (!firstWithAttention) return [];
-        return Object.keys(firstWithAttention.attentionSnapshot!);
-    }, [currentGeneration]);
 
     const handleNextToken = React.useCallback(() => {
         if (nextToken) {
@@ -78,6 +49,36 @@ export function Content({ token }: { token: GenerationToken }) {
             generationStore.selectedToken.value = prevToken;
         }
     }, [prevToken]);
+    return (
+        <div className="flex justify-between items-center my-4">
+            <button
+                className="btn"
+                onClick={handlePrevToken}
+                disabled={!prevToken}
+            >
+                <ArrowLeftIcon />
+            </button>
+            <div>
+                {token.position + 1} / {currentGeneration.length}
+            </div>
+            <button
+                className="btn"
+                onClick={handleNextToken}
+                disabled={!nextToken}
+            >
+                <ArrowRightIcon />
+            </button>
+        </div>
+    );
+}
+
+export function Content({ token }: { token: GenerationToken }) {
+    const sessionId = sessionStore.sessionId.value;
+    const branchId = sessionStore.branchId.value;
+
+    const [substituteToken, setSubstituteToken] = React.useState("");
+    const [generationMode, setGenerationMode] =
+        React.useState<GenerationMode>("continue");
 
     const handleSubstituteTokenChange = React.useCallback(
         (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -85,10 +86,6 @@ export function Content({ token }: { token: GenerationToken }) {
         },
         [],
     );
-
-    const handleSetAttentionTargetToken = React.useCallback(() => {
-        generationStore.setAttentionTargetToken(token);
-    }, [token]);
 
     const handleSubstituteToken = React.useCallback(
         async (tokens: string) => {
@@ -118,7 +115,7 @@ export function Content({ token }: { token: GenerationToken }) {
 
             generationStore.isGenerating.value = false;
         },
-        [currentGeneration, token.position, sessionId, branchId],
+        [token.position, sessionId, branchId],
     );
 
     // React.useEffect(() => {
@@ -143,25 +140,7 @@ export function Content({ token }: { token: GenerationToken }) {
 
     return (
         <div className="p-4 flex flex-col grow">
-            <div className="flex justify-between items-center my-4">
-                <button
-                    className="btn"
-                    onClick={handlePrevToken}
-                    disabled={!prevToken}
-                >
-                    <ArrowLeftIcon />
-                </button>
-                <div>
-                    {token.position + 1} / {currentGeneration.length}
-                </div>
-                <button
-                    className="btn"
-                    onClick={handleNextToken}
-                    disabled={!nextToken}
-                >
-                    <ArrowRightIcon />
-                </button>
-            </div>
+            <Navigation token={token} />
             <div className="flex items-center gap-3 mt-4">
                 <div
                     style={{
@@ -177,12 +156,25 @@ export function Content({ token }: { token: GenerationToken }) {
                     {visualizeWhitespace(token.token)}
                 </div>
             </div>
-            <div className="flex flex-col gap-2 mt-4">
-                {token.tokenTypes.map((type) => (
-                    <div key={type} className="badge badge-outline badge-sm">
-                        {type}
+            <div className="mt-6 text-sm text-gray-500">
+                {token.tokenTimeMs} ms
+            </div>
+            <div className="divider" />
+            <div className="flex flex-col gap-2">
+                {token.tokenTypes.length > 0 ? (
+                    token.tokenTypes.map((type) => (
+                        <div
+                            key={type}
+                            className="badge badge-outline badge-sm"
+                        >
+                            {type}
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-sm italic text-gray-500">
+                        No Special Token Type
                     </div>
-                ))}
+                )}
             </div>
             <div className="divider" />
             <div className="overflow-x-auto">
@@ -225,7 +217,8 @@ export function Content({ token }: { token: GenerationToken }) {
             <div>
                 {token.prompt || token.manual ? (
                     <div className="text-sm italic text-gray-500">
-                        No Alternative Tokens For '{token.prompt ? "Prompt" : "Manual"}' Token
+                        No Alternative Tokens For '
+                        {token.prompt ? "Prompt" : "Manual"}' Token
                     </div>
                 ) : token.alternativeTokens &&
                   token.alternativeTokens.length > 0 ? (
@@ -274,61 +267,6 @@ export function Content({ token }: { token: GenerationToken }) {
             ) : generationMode === "fim" ? (
                 <FimPanel />
             ) : null}
-
-            <div className="divider" />
-            <div className="flex flex-col gap-2">
-                {token.relativeAttention !== undefined ? (
-                    <div className="text-sm">
-                        Relative Attention:{" "}
-                        {token.relativeAttention?.toFixed(3)}
-                    </div>
-                ) : (
-                    <div className="text-sm italic text-gray-500">
-                        Relative Attention Not Available
-                    </div>
-                )}
-                <div className="flex items-center">
-                    <div className="dropdown dropdown-top">
-                        <div
-                            tabIndex={0}
-                            role="button"
-                            className="btn btn-ghost btn-sm"
-                        >
-                            <span
-                                className={`${attentionTargetHeadOptions.length === 0 ? "text-gray-500" : ""}`}
-                            >
-                                Head {attentionTargetHead}
-                            </span>
-                        </div>
-                        <ul
-                            tabIndex={0}
-                            className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                        >
-                            {attentionTargetHeadOptions.map((option) => (
-                                <li
-                                    key={option}
-                                    onClick={() =>
-                                        generationStore.setAttentionTargetHead(
-                                            option,
-                                        )
-                                    }
-                                >
-                                    <a>{option}</a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <button
-                        className="btn btn-ghost grow"
-                        onClick={handleSetAttentionTargetToken}
-                        disabled={attentionTargetHeadOptions.length === 0}
-                    >
-                        {token.position === attentionTargetToken?.position
-                            ? "Remove Attention Target"
-                            : "Set Attention Target"}
-                    </button>
-                </div>
-            </div>
         </div>
     );
 }
@@ -338,7 +276,7 @@ export default function GenerationSidebar() {
     const currentGeneration = generationStore.currentGeneration.value;
     if (!token || currentGeneration.length === 0)
         return (
-            <div className="h-full flex items-center justify-center grow">
+            <div className="h-full flex items-center justify-center p-4 italic text-gray-500 text-center">
                 <div className="">Select a Token</div>
             </div>
         );

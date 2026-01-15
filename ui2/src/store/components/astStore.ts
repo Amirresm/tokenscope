@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals-react";
+import { GenerationTokenData } from "../../models/generationToken";
 
 export enum ViewModesEnum {
     Type = "Type",
@@ -13,7 +14,21 @@ export enum ViewModesEnum {
 const selectedRange = signal<{ start: number; end: number } | null>(null);
 const astViewMode = signal<ViewModesEnum>(ViewModesEnum.Type);
 
+const avgAttentionMap = signal<Record<string, Record<string, number[]>>>({});
+
+const astGroups = signal<
+    {
+        index: number;
+        id: string;
+        tokens: GenerationTokenData[];
+        group: string;
+        averageConfidence: number;
+    }[]
+>([]);
+
 export default {
     selectedRange,
     astViewMode,
+    avgAttentionMap,
+    astGroups,
 };

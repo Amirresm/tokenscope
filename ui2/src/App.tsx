@@ -1,6 +1,8 @@
 import {
     ChartBarIcon,
+    ChartLineIcon,
     FolderIcon,
+    GraphIcon,
     ListIcon,
     UserIcon,
 } from "@phosphor-icons/react";
@@ -11,12 +13,21 @@ import drawerStore, { DrawerTabsEnum } from "./store/components/drawerStore";
 import { LLMManagementModal } from "./components/llm-management/LLMManagementModal";
 import { TrendChartModal } from "./components/reports/TrendChart";
 import { MainBar } from "./components/main-bar/MainBar";
+import { PromptModal } from "./components/reports/PromptModal";
+import globalStore from "./store/components/globalStore";
+import { ASTStatsChartModal } from "./components/reports/AstStatsChart";
+import { ASTAttentionHeatmapModal } from "./components/reports/AstAttentionHeatmap";
 
-const tabs = [
-    { tab: DrawerTabsEnum.SESSION, icon: UserIcon },
-    { tab: DrawerTabsEnum.GENERATION, icon: ListIcon },
-    { tab: DrawerTabsEnum.STATS, icon: ChartBarIcon },
-    { tab: DrawerTabsEnum.PROJECTS, icon: FolderIcon },
+const genTabs = [
+    { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
+    { tab: DrawerTabsEnum.STATS, icon: ChartLineIcon, label: "Stats" },
+    { tab: DrawerTabsEnum.GENERATION, icon: ListIcon, label: "Generation" },
+    { tab: DrawerTabsEnum.ATTENTION, icon: GraphIcon, label: "Attention" },
+    // { tab: DrawerTabsEnum.PROJECTS, icon: FolderIcon, label: "Projects" },
+];
+const astTabs = [
+    { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
+    { tab: DrawerTabsEnum.ASTSTATS, icon: ChartLineIcon, label: "AST Stats" },
 ];
 
 function App() {
@@ -35,6 +46,8 @@ function App() {
         [drawerOpen, drawerState],
     );
 
+    const tabs = globalStore.viewMode.value === "ast" ? astTabs : genTabs;
+
     return (
         <div className={`drawer drawer-end ${drawerOpen ? "drawer-open" : ""}`}>
             <input
@@ -49,19 +62,27 @@ function App() {
                 <div className="grow min-w-0">
                     <LLMManagementModal />
                     <TrendChartModal />
+                    <ASTStatsChartModal />
+                    <ASTAttentionHeatmapModal />
+                    <PromptModal />
                     <LandingPage />
                 </div>
                 <div className="flex flex-col items-center gap-2 my-4">
-                    {tabs.map(({ tab, icon: Icon }) => (
-                        <button
+                    {tabs.map(({ tab, icon: Icon, label }) => (
+                        <div
+                            className="tooltip tooltip-left"
+                            data-tip={label}
                             key={tab}
-                            className={`btn btn-ghost btn-sm btn-square ${
-                                drawerState.tab === tab ? "btn-active" : ""
-                            }`}
-                            onClick={() => handleToggleDrawer(tab)}
                         >
-                            <Icon />
-                        </button>
+                            <button
+                                className={`btn btn-ghost btn-sm btn-square ${
+                                    drawerState.tab === tab ? "btn-active" : ""
+                                }`}
+                                onClick={() => handleToggleDrawer(tab)}
+                            >
+                                <Icon />
+                            </button>
+                        </div>
                     ))}
                     <div className="divider divider-horizontal mx-0 grow self-center"></div>
                 </div>
@@ -72,7 +93,7 @@ function App() {
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
-                <div className="translate-x-96 is-drawer-open:translate-x-0 transition-transform duration-75">
+                <div className="h-full translate-x-96 is-drawer-open:translate-x-0 transition-transform duration-75">
                     <Sidebar />
                 </div>
             </div>

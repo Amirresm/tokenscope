@@ -1,10 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import React from "react";
-import {
-    fetchAvailableModels,
-    fetchCurrentModel,
-    loadModel,
-} from "../../api/llmManagementAPI";
+import { fetchAvailableModels, loadModel } from "../../api/llmManagementAPI";
+import { useCurrentModelQuery } from "../../hooks/current-model-query";
 
 function ModelContent() {
     const sources = ["transformers", "openai"];
@@ -12,10 +9,7 @@ function ModelContent() {
 
     const [searchQuery, setSearchQuery] = React.useState("");
 
-    const currentModelQuery = useQuery({
-        queryKey: ["current-model"],
-        queryFn: async () => fetchCurrentModel(),
-    });
+    const currentModelQuery = useCurrentModelQuery();
 
     const availableModelsQuery = useQuery({
         queryKey: ["available-models", selectedSource],
@@ -40,11 +34,14 @@ function ModelContent() {
                     <p>Loading current model...</p>
                 ) : currentModelQuery.isError ? (
                     <p>Error loading current model.</p>
+                ) : !currentModelQuery.data?.modelNameOrPath ? (
+                    <div className="text-sm">No model loaded.</div>
                 ) : (
-                    <p className="text-sm">
+                    <div className="text-sm">
+                        Name: {currentModelQuery.data?.modelName} <br />
                         Source: {currentModelQuery.data?.source} <br />
-                        Model: {currentModelQuery.data?.modelNameOrPath}
-                    </p>
+                        Path: {currentModelQuery.data?.modelNameOrPath}
+                    </div>
                 )}
             </div>
             <div className="flex-1 min-h-0 flex flex-col gap-2">
@@ -57,20 +54,20 @@ function ModelContent() {
                         setSearchQuery(e.target.value);
                     }}
                 />
-                <div role="tablist" className="tabs tabs-border">
-                    {sources.map((source) => (
-                        <a
-                            key={source}
-                            role="tab"
-                            className={`tab ${
-                                selectedSource === source ? "tab-active" : ""
-                            }`}
-                            onClick={() => setSelectedSource(source)}
-                        >
-                            {source}
-                        </a>
-                    ))}
-                </div>
+                {/* <div role="tablist" className="tabs tabs-border"> */}
+                {/*     {sources.map((source) => ( */}
+                {/*         <a */}
+                {/*             key={source} */}
+                {/*             role="tab" */}
+                {/*             className={`tab ${ */}
+                {/*                 selectedSource === source ? "tab-active" : "" */}
+                {/*             }`} */}
+                {/*             onClick={() => setSelectedSource(source)} */}
+                {/*         > */}
+                {/*             {source} */}
+                {/*         </a> */}
+                {/*     ))} */}
+                {/* </div> */}
                 {availableModelsQuery.isLoading ? (
                     <p>Loading models...</p>
                 ) : availableModelsQuery.isError ? (

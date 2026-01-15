@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { fetchCurrentModel } from "../../api/llmManagementAPI";
 import sessionStore from "../../store/sessionStore";
 import { GearIcon, RobotIcon, TreeStructureIcon } from "@phosphor-icons/react";
@@ -6,6 +5,11 @@ import { TokenLevelConfigDropdown } from "../TokenLevelConfigDropdown";
 import React from "react";
 import globalStore from "../../store/components/globalStore";
 import astStore, { ViewModesEnum } from "../../store/components/astStore";
+import generationStore from "../../store/generationStore";
+import drawerStore, {
+    DrawerTabsEnum,
+} from "../../store/components/drawerStore";
+import { useCurrentModelQuery } from "../../hooks/current-model-query";
 
 function AstPageActions() {
     const astViewMode = astStore.astViewMode.value;
@@ -52,16 +56,10 @@ export function MainHeader() {
     const branchId = sessionStore.branchId.value;
     const viewMode = globalStore.viewMode.value;
 
-    const currentModelQuery = useQuery({
-        queryKey: ["current-model"],
-        queryFn: async () => fetchCurrentModel(),
-    });
+    const currentGeneration = generationStore.currentGeneration.value;
 
-    const modelName = currentModelQuery.data?.modelNameOrPath
-        ? currentModelQuery.data.modelNameOrPath?.split("/")[
-              currentModelQuery.data.modelNameOrPath?.split("/").length - 1
-          ]
-        : "No Model Loaded";
+    const currentModelQuery = useCurrentModelQuery();
+    const modelName = currentModelQuery.data?.modelName || "No Model Loaded";
 
     const handleChangeViewMode = React.useCallback(
         (mode: "generation" | "graph" | "ast") => () => {
@@ -71,20 +69,72 @@ export function MainHeader() {
         },
         [],
     );
+
+    const promptTokenCount = React.useMemo(() => {
+        if (!currentGeneration) return 0;
+        let nonPromptTokens = 0;
+        const reversedGeneration = [...currentGeneration].reverse();
+        for (const t of reversedGeneration) {
+            if (t.prompt || t.manual) {
+                break;
+            }
+            nonPromptTokens += 1;
+        }
+
+        return currentGeneration.length - nonPromptTokens;
+    }, [currentGeneration]);
+
     return (
         <header className="">
-            <div className="bg-base-200 border border-base-300 rounded-xl flex items-center gap-8 m-4 mb-2 p-2">
-                <div className="flex justify-center items-center gap-2">
-                    <TreeStructureIcon />
-                    <h2 className="">
-                        <span className="text-primary">{sessionId}</span> {">"}{" "}
-                        <span className="text-primary">{branchId}</span>
-                    </h2>
-                </div>
-                <div className="flex justify-center items-center gap-2">
+            <div className="bg-base-200 border border-base-300 rounded-xl flex items-center gap-2 m-4 mb-2 px-0 py-0 text-sm">
+                <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                        const modal = document.getElementById(
+                            "llm_management_modal",
+                        ) as HTMLDialogElement;
+                        modal.showModal();
+                    }}
+                >
                     <RobotIcon />
-                    <h3 className="">{modelName}</h3>
+                    {modelName}
+                </button>
+                <div className="divider divider-horizontal mx-0"></div>
+                <div className="flex justify-center items-center gap-0">
+                    <TreeStructureIcon />
+                    <button
+                        className="btn btn-ghost btn-sm text-primary"
+                        onClick={() => {
+                            drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);
+                            drawerStore.openDrawer();
+                        }}
+                    >
+                        {sessionId}
+                    </button>
+                    {">"}
+                    <button
+                        className="btn btn-ghost btn-sm text-primary"
+                        onClick={() => {
+                            drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);
+                            drawerStore.openDrawer();
+                        }}
+                    >
+                        {branchId}
+                    </button>
                 </div>
+                <div className="divider divider-horizontal mx-0"></div>
+                <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                        const modal = document.getElementById(
+                            "prompt_modal",
+                        ) as HTMLDialogElement;
+                        modal.showModal();
+                    }}
+                >
+                    View Prompt ({promptTokenCount} tokens)
+                </button>
+                <TokenLevelConfigDropdown />
             </div>
 
             <div className="flex gap-2 items-center mx-4">

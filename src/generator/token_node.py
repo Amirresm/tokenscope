@@ -21,6 +21,8 @@ class Token:
     last_perplexity: float | None
     position: int  # or depth
 
+    token_time_ms: float
+
     # token_types: set[TokenType]
     token_types: list[str]
     alternative_tokens: list["Token"] = field(default_factory=list)
@@ -34,6 +36,7 @@ class Token:
             "perplexity": self.perplexity,
             "last_perplexity": self.last_perplexity,
             "position": self.position,
+            "token_time_ms": self.token_time_ms,
             "token_types": [t for t in self.token_types],
             "alternative_tokens": [
                 alt_token.to_dict() for alt_token in self.alternative_tokens
@@ -66,6 +69,7 @@ class Token:
                 else None
             ),
             "position": self.position if self.position != -1 else None,
+            "token_time_ms": f"{self.token_time_ms:.2f}",
             "token_types": self.token_types,
             "alternative_tokens": [
                 alt_token.to_dict() for alt_token in self.alternative_tokens
@@ -99,6 +103,7 @@ class Token:
             perplexity=data.get("perplexity", None),
             last_perplexity=data.get("last_perplexity", None),
             position=data["position"],
+            token_time_ms=data["token_time_ms"],
             token_types=data.get("token_types", []),
             alternative_tokens=alternative_tokens,
             attention_snapshot=attention_snapshot,

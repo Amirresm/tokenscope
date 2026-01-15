@@ -89,8 +89,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
     const handleClick = React.useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            drawerStore.openDrawer();
-            drawerStore.setDrawerTab(DrawerTabsEnum.GENERATION);
+            drawerStore.tokenClickDrawer();
             generationStore.selectedToken.value = generationToken;
         },
         [generationToken],
@@ -146,7 +145,15 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         );
 
         return textColor;
-    }, [prompt, manual, colorVerbosity, tokenTypes, metricValue, metric, metricPercetiles]);
+    }, [
+        prompt,
+        manual,
+        colorVerbosity,
+        tokenTypes,
+        metricValue,
+        metric,
+        metricPercetiles,
+    ]);
 
     const startOfLineMarkerColor = React.useMemo(() => {
         if (lineConfidence === undefined) return "";
@@ -201,58 +208,34 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
     }, [attentionVisibleRange, relativeAttention]);
 
     return (
-        <>
-            <span
-                className={`${textColor} hover:text-blue-500 active-token
+        <span
+            className={`${textColor} hover:text-blue-500 active-token
 			${isSelected ? "selected-token" : ""}
 			${isFimSelected ? "fim-selected-token" : ""}
 			${isOnlyFimSelected ? "only-fim-selected-token" : ""}
 			${isAttentionTarget && !isSelected ? "attention-target-token" : ""}
 			${relativeAttentionColor ? `border ${relativeAttentionColor}` : ""}`}
-                onClick={handleClick}
-            >
-                {isSelected && (
-                    <span
-                        className="token-arrow left-arrow"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            generationStore.updateFimIndices(position - 1);
-                        }}
-                    >
-                        <ArrowLineLeftIcon />
-                    </span>
-                )}
-                {showLineInfo && lineNumber !== undefined && (
-                    <span className="text-gray-500 text-sm mr-2">
-                        {String(lineNumber).padStart(2, "0")}
-                    </span>
-                )}
-                {showLineInfo && lineConfidence !== undefined && (
-                    <span
-                        className={`${startOfLineMarkerColor} text-xs border rounded-lg px-1 mr-1`}
-                    >
-                        {lineConfidence.toFixed(2)}
-                    </span>
-                )}
-                <div
-                    className="tooltip inline"
-                    data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(3)}`}
+            onClick={handleClick}
+        >
+            {showLineInfo && lineNumber !== undefined && (
+                <span className="text-gray-500 text-sm mr-2">
+                    {String(lineNumber).padStart(2, "0")}
+                </span>
+            )}
+            {showLineInfo && lineConfidence !== undefined && (
+                <span
+                    className={`${startOfLineMarkerColor} text-xs border rounded-lg px-1 mr-1`}
                 >
-                    {isSelected ? visualizeWhitespace(token) : token}
-                </div>
-                {isSelected && (
-                    <span
-                        className="token-arrow right-arrow"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            generationStore.updateFimIndices(position);
-                        }}
-                    >
-                        <ArrowLineRightIcon />
-                    </span>
-                )}
-            </span>
-        </>
+                    {lineConfidence.toFixed(2)}
+                </span>
+            )}
+            <div
+                className="tooltip tooltip-right inline"
+                data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(3)}`}
+            >
+                {isSelected ? visualizeWhitespace(token) : token}
+            </div>
+        </span>
     );
 });
 
@@ -364,10 +347,10 @@ const GenerationView = () => {
 
     return (
         <div
-            className="grow overflow-y-auto p-4"
+            className="grow overflow-y-auto overflow-x-visible m-4 p-4"
             onClick={() => (generationStore.selectedToken.value = undefined)}
         >
-            <div className="whitespace-pre-wrap wrap-break-word h-full overflow-x-hidden">
+            <div className="whitespace-pre-wrap wrap-break-word h-full">
                 <GenerationList
                     generationList={generationList}
                     colorVerbosity={colorVerbosity}

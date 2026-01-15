@@ -142,3 +142,8 @@
         background-position: 85% 50%;
     }
 }
+
+
+.tooltip::before {
+    z-index: 1000;
+}

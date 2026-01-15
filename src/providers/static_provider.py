@@ -92,6 +92,8 @@ class StaticProvider:
                     token_string=step.token,
                     token_id=step.token_id,
                     confidence=step.confidence,
+                    perplexity=None,
+                    last_perplexity=None,
                     position=step.index,
                     token_types=step.tags,
                     alternative_tokens=[
@@ -99,6 +101,8 @@ class StaticProvider:
                             token_string=step.all_tokens[i],
                             token_id=step.all_tokens_ids[i],
                             confidence=step.all_confidences[i],
+                            perplexity=None,
+                            last_perplexity=None,
                             position=-1,
                             token_types=[],
                         )

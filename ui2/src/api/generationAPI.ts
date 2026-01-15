@@ -136,7 +136,9 @@ const handleTokenGenerationStream = async (
 
     for (let p = 0; p < 100; p += 20) {
         const confPerc = calcPercentile(
-            generationStore.currentGeneration.value,
+            generationStore.currentGeneration.value.filter(
+                (t) => !t.prompt && !t.manual,
+            ),
             (t) => (t.confidence !== undefined ? t.confidence : 0),
             p,
         );
@@ -161,7 +163,9 @@ const handleTokenGenerationStream = async (
             lastPerplexityPercentiles.push(lastPerpPerc);
         }
         const stdPerc = calcPercentile(
-            generationStore.currentGeneration.value,
+            generationStore.currentGeneration.value.filter(
+                (t) => !t.prompt && !t.manual,
+            ),
             (t) => (t.std !== undefined ? t.std : 0),
             p,
         );

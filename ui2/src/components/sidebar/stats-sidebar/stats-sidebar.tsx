@@ -17,6 +17,13 @@ export default function StatsSidebar() {
     const fimStartIndex = generationStore.fimStartToken.value;
     const fimEndIndex = generationStore.fimEndToken.value;
 
+    const confidenceTenPercentiles =
+        generationStore.confidenceTenPercentiles.value;
+    const perplexityTenPercentiles =
+        generationStore.perplexityTenPercentiles.value;
+    const lastPerplexityTenPercentiles =
+        generationStore.lastPerplexityTenPercentiles.value;
+
     const stats = React.useMemo(() => {
         const tokens = currentGeneration.filter(
             (token) =>
@@ -71,6 +78,14 @@ export default function StatsSidebar() {
         ];
     }, [projectInfoQuery.data?.samples, selectedProjectSampleInfo]);
 
+    const totalTokenTime = React.useMemo(() => {
+        if (!currentGeneration) return 0;
+        return currentGeneration.reduce(
+            (acc, token) => acc + token.tokenTimeMs,
+            0,
+        );
+    }, [currentGeneration]);
+
     const appendToGeneration = generationStore.appendToGeneration;
     const clearGeneration = generationStore.clearGeneration;
     const handleNavigateSamples = React.useCallback(
@@ -120,6 +135,18 @@ export default function StatsSidebar() {
                     </button>
 
                     <div className="stats stats-vertical shadow">
+                        <div className="stat">
+                            <div className="stat-title">
+                                Generated Tokens Time
+                            </div>
+                            <div className="stat-value text-sm">
+                                {totalTokenTime.toFixed(2)} ms (Avg:{" "}
+                                {(
+                                    totalTokenTime / stats.generatedTokensCount
+                                ).toFixed(2)}
+                                ms)
+                            </div>
+                        </div>
                         <div className="stat">
                             <div className="stat-title">Generated Tokens</div>
                             <div className="stat-value">

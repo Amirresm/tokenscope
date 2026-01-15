@@ -28,6 +28,7 @@ class BatchGenerator(Generator):
             if "config.json" in files and "tokenizer_config.json" in files:
                 model_dirs.append(root)
         model_dirs = [{"id": d, "metadata": {}} for d in model_dirs]
+        model_dirs.sort(key=lambda x: x["id"])
         return model_dirs
 
     def __init__(
@@ -42,15 +43,16 @@ class BatchGenerator(Generator):
         self.model = model
         self.default_max_tokens = default_max_tokens
         self.max_tokens = default_max_tokens
+
         self.topk = topk
         self.force_greedy = force_greedy
         self.thr = thr
         self.stop_tokens = stop_tokens
         self.device = self.model.m.device
+
         self.num_sample_history = []
         self.time_history = []
         self.memory_history = []
-        self.generation_results: list[Token] = []
 
     def reset(self):
         self.prompt = None
@@ -58,7 +60,6 @@ class BatchGenerator(Generator):
         self.num_sample_history = []
         self.time_history = []
         self.memory_history = []
-        self.generation_results = []
         self.model.reset()
 
     def generate_yield(
@@ -100,7 +101,9 @@ class BatchGenerator(Generator):
         generation_step_count = 0
         past_key_values = None
 
-        memory_before = torch.cuda.memory_allocated(self.device)
+        if self.model.device == "cuda":
+            memory_before = torch.cuda.memory_allocated(self.device)
+
         start_time = time.time()
         with torch.no_grad():
             for i in range(remaining_token_count):
@@ -132,11 +135,13 @@ class BatchGenerator(Generator):
         elapsed = time.time() - start_time
         self.time_history.append(elapsed)
 
-        max_memory = torch.cuda.max_memory_allocated(self.device)
-        self.memory_history.append(max_memory)
-        print(
-            f"Memory usage: {memory_before / 1024**2:.2f} MB -> {max_memory / 1024**2:.2f} MB"
-        )
+        if self.model.device == "cuda":
+            max_memory = torch.cuda.max_memory_allocated(self.device)
+            self.memory_history.append(max_memory)
+            print(
+                f"Memory usage: {memory_before / 1024**2:.2f} MB -> {max_memory / 1024**2:.2f} MB"
+            )
+
         self.num_sample_history.append(batch_size)
 
         if generation_step_count == remaining_token_count:
@@ -191,6 +196,7 @@ class BatchGenerator(Generator):
 
                 prompt_step_result = Token(
                     position=j,
+                    token_time_ms=0,
                     token_string=token,
                     token_id=token_id,
                     confidence=1.0,
@@ -245,6 +251,7 @@ class BatchGenerator(Generator):
 
                 prompt_step_result = Token(
                     position=j,
+                    token_time_ms=0,
                     token_string=token,
                     token_id=token_id,
                     confidence=1.0,
@@ -280,6 +287,7 @@ class BatchGenerator(Generator):
         record_attention,
         index: int,
     ):
+        model_start_time = time.perf_counter_ns()
         if past_key_values is None or record_attention:
             output = self.model.m(
                 input_ids=input_ids,
@@ -293,6 +301,8 @@ class BatchGenerator(Generator):
                 past_key_values=past_key_values,
                 use_cache=True,
             )
+        model_duration = time.perf_counter_ns() - model_start_time
+
         logits = output.logits
         perplexity, last_perplexity = self._calculate_perplexity(
             logits, input_ids, attention_mask
@@ -345,6 +355,7 @@ class BatchGenerator(Generator):
 
             step_result = Token(
                 position=index,
+                token_time_ms=model_duration / 1e6,
                 token_string=decoded_token,
                 token_id=token_id,
                 confidence=confidence,
@@ -354,6 +365,7 @@ class BatchGenerator(Generator):
                 alternative_tokens=[
                     Token(
                         position=-1,
+                        token_time_ms=model_duration / 1e6,
                         token_string=self.model.ids_to_str(tok_id),
                         token_id=tok_id,
                         confidence=conf,
@@ -498,7 +510,7 @@ class BatchGenerator(Generator):
 
     def record_attentions(self, attention: tuple[torch.Tensor]):
         attn_layer = -1
-        attn_top_n = 10
+        attn_top_n = 50
         attn_layer = min(len(attention) - 1, attn_layer or 0)
         last_layer_attention = attention[attn_layer]  # (B, H, T, S)
 
@@ -541,13 +553,6 @@ class BatchGenerator(Generator):
             attention_snapshots.append(snapshot)
 
         return attention_snapshots
-
-    def generation_to_str(self, attach_prompt=True):
-        generation = self.prompt if self.prompt and attach_prompt else ""
-        for step_result in self.generation_results:
-            generation += f"{step_result.token_string}"
-
-        return generation
 
     def _log_metrics(self, elapsed, token_count):
         print(

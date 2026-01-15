@@ -1,4 +1,5 @@
 from enum import Enum
+import os
 from typing import Optional, Tuple
 import torch
 import gc
@@ -29,6 +30,7 @@ class ControlTokenTypes(Enum):
 
     PAD = "pad_token"
 
+
 class ModelWrapper:
     def __init__(
         self,
@@ -38,6 +40,23 @@ class ModelWrapper:
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
     ):
+        self.device = device
+        if self.device == "cpu":
+            # num_cores = os.cpu_count() or 1
+            # if num_cores > 4:
+            #     num_cores = num_cores - 2
+            # torch.set_num_threads(num_cores)
+            print("Using CPU device")
+            print(f"Set number of CPU threads to {torch.get_num_threads()}")
+        elif self.device == "cuda":
+            if not torch.cuda.is_available():
+                raise ValueError("CUDA is not available.")
+            print(
+                f"Using CUDA device: {torch.cuda.get_device_name(torch.cuda.current_device())}"
+            )
+        else:
+            raise ValueError(f"Unsupported device: {self.device}")
+
         if model is not None and tokenizer is not None:
             self.m = model
             self.t = tokenizer
@@ -55,7 +74,7 @@ class ModelWrapper:
 
             self.m: ModelType = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                torch_dtype="auto",
+                dtype="auto",
                 device_map="auto",
                 quantization_config=bnb_config,
                 attn_implementation="eager",
@@ -91,13 +110,15 @@ class ModelWrapper:
 
     def reset(self):
         gc.collect()
-        torch.cuda.empty_cache()
+        if self.device == "cuda":
+            torch.cuda.empty_cache()
 
     def unload(self):
         del self.m
         del self.t
         gc.collect()
-        torch.cuda.empty_cache()
+        if self.device == "cuda":
+            torch.cuda.empty_cache()
 
 
 class LlamaModelWrapper(ModelWrapper):

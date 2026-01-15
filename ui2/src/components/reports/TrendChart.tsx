@@ -44,7 +44,7 @@ function Chart() {
         const chart = root.container.children.push(
             am5xy.XYChart.new(root, {
                 panX: true,
-                panY: true,
+                panY: false,
                 wheelX: "panX",
                 wheelY: "zoomX",
                 pinchZoomX: true,

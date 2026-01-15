@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 import json
 
@@ -112,6 +113,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     },
                 }
                 await websocket.send_text(json.dumps(message))
+                await asyncio.sleep(0.01)
 
             message = {"type": "end"}
 

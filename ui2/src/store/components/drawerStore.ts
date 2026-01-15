@@ -3,8 +3,11 @@ import { signal } from "@preact/signals-react";
 export enum DrawerTabsEnum {
     SESSION = "session",
     GENERATION = "generation",
+    ATTENTION = "attention",
     STATS = "stats",
     PROJECTS = "projects",
+
+    ASTSTATS = "ASTStats",
 }
 
 type DrawerState = {
@@ -38,7 +41,19 @@ function openDrawer() {
     };
 }
 
-export function setDrawerTab(tab: DrawerTabsEnum) {
+function tokenClickDrawer() {
+    if ([DrawerTabsEnum.GENERATION, DrawerTabsEnum.ATTENTION].includes(drawerStateSignal.value.tab)) {
+        openDrawer();
+    } else {
+        drawerStateSignal.value = {
+            ...drawerStateSignal.value,
+            tab: DrawerTabsEnum.GENERATION,
+            open: true,
+        };
+    }
+}
+
+function setDrawerTab(tab: DrawerTabsEnum) {
     drawerStateSignal.value = {
         ...drawerStateSignal.value,
         tab,
@@ -50,5 +65,6 @@ export default {
     toggleDrawer,
     closeDrawer,
     openDrawer,
+    tokenClickDrawer,
     setDrawerTab,
 };

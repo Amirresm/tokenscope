@@ -26,6 +26,7 @@ export type GenerationTokenData = {
     perplexity?: string;
     last_perplexity?: string;
     position: number;
+    token_time_ms: string;
     token_types: string[];
     alternative_tokens?: GenerationTokenData[];
     attention_snapshot?: AttentionSnapshotData;
@@ -43,6 +44,7 @@ export type GenerationToken = {
     std?: number;
 
     position: number;
+    tokenTimeMs: number;
     tokenTypes: string[];
     alternativeTokens?: GenerationToken[];
     branchId?: string;
@@ -99,6 +101,7 @@ export function generationTokenFromData(
             : undefined,
         std: std,
         position: data.position,
+        tokenTimeMs: parseFloat(data.token_time_ms),
         tokenTypes: tokenTypes,
         branchId: data.branch_id,
         alternativeTokens: alternativeTokens,
