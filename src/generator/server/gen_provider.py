@@ -4,6 +4,7 @@ from src.generator.server.openai_generator import OpenAIGenerator
 from src.generator.server.transformers_generator import BatchGenerator
 from src.model.wrapper import (
     ControlTokenTypes,
+    GenericModelWrapper,
     LlamaModelWrapper,
     QwenModelWrapper,
 )
@@ -33,9 +34,13 @@ class GeneratorProvider:
             LlamaModelWrapper
             if "llama" in model_name_or_path.lower()
             else (
-                QwenModelWrapper
+                (
+                    QwenModelWrapper
+                    if "qwen" in model_name_or_path.lower()
+                    else None
+                )
                 if "qwen" in model_name_or_path.lower()
-                else None
+                else GenericModelWrapper
             )
         )
         assert Wrapper is not None, f"Unsupported model: {model_name_or_path}"

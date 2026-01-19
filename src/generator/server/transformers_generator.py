@@ -514,19 +514,24 @@ class BatchGenerator(Generator):
         )
 
         # temperature scaling (coeff = 1 / temperature)
-        logits = logits[:, -1, :] * coeff  # (batch_size, vocab)
+        logits = logits[:, -1, :]  # (batch_size, vocab)
+        scaled_logits = logits * coeff  # (batch_size, vocab)
+
+        # original distribution
+        orig_probs = torch.softmax(logits, dim=-1)
 
         # full distribution (for confidence metrics)
-        full_probs = torch.softmax(logits, dim=-1)
+        full_probs = torch.softmax(scaled_logits, dim=-1)
 
         # top-k sampling distribution
-        topk_logits, topk_indices = torch.topk(logits, topk, dim=-1)
+        topk_logits, topk_indices = torch.topk(scaled_logits, topk, dim=-1)
         topk_probs = torch.softmax(topk_logits, dim=-1)
 
         # alternatives (debug)
-        at_probs, at_indices = torch.topk(full_probs, alternatives, dim=-1)
+        at_probs, at_indices = torch.topk(orig_probs, alternatives, dim=-1)
 
         # move to cpu once
+        orig_probs = orig_probs.detach().cpu().to(torch.float32).numpy()
         full_probs = full_probs.detach().cpu().to(torch.float32).numpy()
         topk_probs = topk_probs.detach().cpu().to(torch.float32).numpy()
         topk_indices = topk_indices.detach().cpu().numpy()
@@ -566,7 +571,7 @@ class BatchGenerator(Generator):
             new_ids[i, 0] = token_id
 
             # ---------- confidence metrics ----------
-            fp = full_probs[i]
+            fp = orig_probs[i]
 
             # 1) true model confidence
             confidence = float(fp[token_id])

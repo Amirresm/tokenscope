@@ -146,17 +146,17 @@ export function Content({ token }: { token: GenerationToken }) {
                         "--value": token.confidence * 100,
                         "--size": "3rem",
                     }}
-                    className={`radial-progress ${getColor(token.confidence)}`}
+                    className={`radial-progress ${getColor(token.confidence)} text-xs`}
                 >
-                    {token.confidence.toFixed(2)}
+                    {token.confidence.toFixed(3)}
                 </div>
                 <div className="text-lg whitespace-pre">
                     {visualizeWhitespace(token.token)}
                 </div>
             </div>
-            <div className="mt-6 text-sm text-gray-500">
-                {token.tokenTimeMs} ms
-            </div>
+            {/* <div className="mt-6 text-sm text-gray-500"> */}
+            {/*     {token.tokenTimeMs} ms */}
+            {/* </div> */}
             <div className="divider" />
             <div className="flex flex-col gap-2">
                 {token.tokenTypes.length > 0 ? (
@@ -179,39 +179,49 @@ export function Content({ token }: { token: GenerationToken }) {
                 <table className="table">
                     <thead>
                         <tr className="text-xs">
-                            {/* <th>Branch</th> */}
-                            <th>PPL</th>
-                            <th>Last PPL</th>
-                            <th>Margin Conf.</th>
-                            <th>Entropy</th>
+                            <th>Metric</th>
+                            <th className="text-center">Value</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr className="text-xs">
-                            {/* <td>{token.branchId}</td> */}
+                            <td>Generation Time</td>
+                            <td className="text-center">{token.tokenTimeMs} ms</td>
+                        </tr>
+                        <tr className="text-xs">
+                            <td>PPL</td>
                             <td className="text-center">
                                 {token.perplexity === undefined
                                     ? "Not Calculated"
                                     : isNaN(token.perplexity)
                                       ? "N/A"
-                                      : token.perplexity.toFixed(3)}
+                                      : token.perplexity}
                             </td>
+                        </tr>
+                        <tr className="text-xs">
+                            <td>Last PPL</td>
                             <td className="text-center">
                                 {token.lastPerplexity === undefined
                                     ? "Not Calculated"
                                     : isNaN(token.lastPerplexity)
                                       ? "N/A"
-                                      : token.lastPerplexity.toFixed(3)}
+                                      : token.lastPerplexity}
                             </td>
+                        </tr>
+                        <tr className="text-xs">
+                            <td>Margin Conf.</td>
                             <td className="text-center">
                                 {token.marginConfidence === undefined
                                     ? "Not Calculated"
-                                    : token.marginConfidence.toFixed(3)}
+                                    : token.marginConfidence}
                             </td>
+                        </tr>
+                        <tr className="text-xs">
+                            <td>Entropy</td>
                             <td className="text-center">
                                 {token.entropy === undefined
                                     ? "Not Calculated"
-                                    : token.entropy.toFixed(3)}
+                                    : token.entropy}
                             </td>
                         </tr>
                     </tbody>

@@ -2,13 +2,20 @@ import { PlusIcon, RobotIcon } from "@phosphor-icons/react";
 import React from "react";
 import sessionStore from "../../store/sessionStore";
 import { useCurrentModelQuery } from "../../hooks/current-model-query";
+import generationStore from "../../store/generationStore";
+import drawerStore, {
+    DrawerTabsEnum,
+} from "../../store/components/drawerStore";
 
 export function MainBar() {
     const currentModelQuery = useCurrentModelQuery();
     const modelName = currentModelQuery.data?.modelName || "No Model Loaded";
 
     const handleNewSession = React.useCallback(() => {
+        generationStore.resetGenerationStore();
         sessionStore.resetSession();
+        drawerStore.closeDrawer();
+        drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);
     }, []);
 
     return (
@@ -21,7 +28,10 @@ export function MainBar() {
                     <PlusIcon />
                 </button>
             </div>
-            <div className="tooltip tooltip-right" data-tip={`Current Model: ${modelName}`}>
+            <div
+                className="tooltip tooltip-right"
+                data-tip={`Current Model: ${modelName}`}
+            >
                 <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => {

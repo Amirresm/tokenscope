@@ -160,13 +160,14 @@ function Chart() {
                                 t.token === token.token_string,
                         );
                         if (!richToken) {
-                            console.warn(
+                            console.error(
                                 "Rich token not found for attention mapping",
                                 token,
                             );
-                            throw new Error(
-                                "Rich token not found for attention mapping",
-                            );
+                            // throw new Error(
+                            //     "Rich token not found for attention mapping",
+                            // );
+                            continue;
                         }
                         if (richToken.attentionSnapshot) {
                             const meanAttentionsPerHead =

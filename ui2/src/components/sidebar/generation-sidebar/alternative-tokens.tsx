@@ -75,7 +75,6 @@ export default function AlternativeTokens({
                     accessibilityLayer
                     data={chartData}
                     margin={{ top: 8, right: 0, bottom: 24, left: -16 }}
-                    
                 >
                     {/* <CartesianGrid vertical={false} /> */}
                     <XAxis
@@ -108,8 +107,7 @@ export default function AlternativeTokens({
                                         </div>
                                         <div>
                                             Confidence:{" "}
-                                            {(data.confidence * 100).toFixed(2)}
-                                            %
+                                            {data.confidence.toFixed(6)}
                                         </div>
                                     </div>
                                 );
@@ -122,6 +120,7 @@ export default function AlternativeTokens({
                         radius={4}
                         onClick={handleClick}
                         className="cursor-pointer"
+                        isAnimationActive={false}
                     />
                 </BarChart>
             </div>

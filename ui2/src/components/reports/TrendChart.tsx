@@ -4,6 +4,7 @@ import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
 import generationStore from "../../store/generationStore";
+import { getOutliers } from "../../utils/outlier";
 
 function visualizeWhitespace(str: string) {
     return str
@@ -19,6 +20,7 @@ function visualizeWhitespace(str: string) {
 type DataPoint = {
     position: number;
     tokenString: string;
+    isPromptOrManual: boolean;
     confidence: number;
     perplexity: number;
     lastPerplexity: number;
@@ -31,13 +33,14 @@ function Chart() {
     const chartRef = useRef<am5xy.XYChart>(null);
 
     const currentGeneration = generationStore.currentGeneration.value;
+    const selectedToken = generationStore.selectedToken.value;
 
     const metrics = [
         "confidence",
-        "perplexity",
-        "lastPerplexity",
         "marginConfidence",
         "entropy",
+        "perplexity",
+        "lastPerplexity",
     ];
 
     useLayoutEffect(() => {
@@ -56,6 +59,7 @@ function Chart() {
                 wheelY: "zoomX",
                 pinchZoomX: true,
                 paddingLeft: 0,
+                paddingRight: 0,
                 layout: root.verticalLayout,
             }),
         );
@@ -65,11 +69,12 @@ function Chart() {
         const data: DataPoint[] = [];
 
         const renderer = am5xy.AxisRendererX.new(root, {});
+
         renderer.labels.template.setAll({
             rotation: -90,
             centerY: am5.p50,
             centerX: am5.p100,
-            paddingRight: 15,
+            paddingRight: 16,
         });
         let xAxis = chart.xAxes.push(
             am5xy.CategoryAxis.new(root, {
@@ -114,6 +119,7 @@ function Chart() {
                     yAxis: yAxis,
                     valueYField: m,
                     categoryXField: "position",
+                    minBulletDistance: 10,
                 }),
             );
 
@@ -128,62 +134,52 @@ function Chart() {
             });
 
             series.data.setAll(data);
+            series.events.on("datavalidated", function () {
+                am5.array.each(series.dataItems, function (dataItem) {
+                    const p = xAxis.dataItemToPosition(dataItem);
+                    const axisDataItem = xAxis.getSeriesItem(series, p);
+                    const dataContext = axisDataItem?.dataContext as DataPoint;
+                    if (!dataContext.isPromptOrManual) {
+                        const circle = am5.Circle.new(root, {
+                            radius: 2,
+                            fill: series.get("fill"),
+                            strokeWidth: 1,
+                            centerX: am5.percent(50),
+                            centerY: am5.percent(50),
+                            stroke: root.interfaceColors.get("background"),
+                        });
+                        const bullet = am5.Bullet.new(root, {
+                            sprite: circle,
+                            locationX: 1,
+                            locationY: 1,
+                        });
+                        series.addBullet(dataItem, bullet);
+                    }
+                });
+            });
 
-            // series1.bullets.push(function () {
-            //     let circleTemplate = am5.Template.new({
-            //         radius: 6,
-            //         templateField: "bulletSettings",
-            //         fill: series1.get("fill"),
-            //         strokeWidth: 2,
-            //         stroke: root.interfaceColors.get("background"),
-            //     });
-            //
-            //     let circle = am5.Circle.new(root, {}, circleTemplate);
-            //
-            //     return am5.Bullet.new(root, {
-            //         sprite: circle,
-            //         locationX: 0,
-            //     });
-            // });
-            //
-            // series1.bullets.push(function () {
-            //     let label = am5.Label.new(root, {
-            //         populateText: true,
-            //         text: "{tokenString}",
-            //         centerX: am5.p50,
-            //         centerY: 30,
-            //         fontSize: 10,
-            //         fontWeight: "bold",
-            //         paddingBottom: 4,
-            //         paddingTop: 4,
-            //         paddingLeft: 6,
-            //         paddingRight: 6,
-            //         fill: am5.Color.brighten(series1.get("fill"), -0.1),
-            //     });
-            //
-            //     label.set(
-            //         "background",
-            //         am5.RoundedRectangle.new(root, {
-            //             fill: am5.color(0xffffff),
-            //             fillOpacity: 0.75,
-            //             cornerRadiusBL: 3,
-            //             cornerRadiusBR: 3,
-            //             cornerRadiusTL: 3,
-            //             cornerRadiusTR: 3,
-            //             stroke: series1.get("fill"),
-            //         }),
-            //     );
-            //
-            //     return am5.Bullet.new(root, {
-            //         sprite: label,
-            //         locationX: 0,
-            //     });
-            // });
+            series.bullets.push(function () {
+                let circle = am5.Circle.new(root, {
+                    radius: 3,
+                    fill: series.get("fill"),
+                    strokeWidth: 1,
+                    centerX: am5.percent(50),
+                    centerY: am5.percent(50),
+                    stroke: root.interfaceColors.get("background"),
+                });
+
+                const bullet = am5.Bullet.new(root, {
+                    sprite: circle,
+                    locationX: 0.5,
+                });
+
+                return bullet;
+            });
 
             const tooltip = series.set(
                 "tooltip",
                 am5.Tooltip.new(root, {
-                    labelText: `{position}: '{tokenString}'\n${m.charAt(0).toUpperCase() + m.slice(1)}: {${m}}`,
+                    labelText: `[fontSize: 10px]{position}: '{tokenString}'\n${m.charAt(0).toUpperCase() + m.slice(1)}: {${m}}[/]`,
                 }),
             );
             const background = tooltip.get("background");
@@ -202,57 +198,6 @@ function Chart() {
             });
         }
 
-        // Add scrollbar
-        // https://www.amcharts.com/docs/v5/charts/xy-chart/scrollbars/
-        // let scrollbar = chart.set(
-        //     "scrollbarX",
-        //     am5xy.XYChartScrollbar.new(root, {
-        //         orientation: "horizontal",
-        //         height: 50,
-        //     }),
-        // );
-        //
-        // let sbXAxis = chart.xAxes.push(
-        //     am5xy.CategoryAxis.new(root, {
-        //         renderer: am5xy.AxisRendererX.new(root, {}),
-        //         categoryField: "position",
-        //     }),
-        // );
-        // sbXAxis
-        //     .get("renderer")
-        //     .labels.template.adapters.add("text", function (text, target) {
-        //         if (target.dataItem && target.dataItem.dataContext) {
-        //             return target.dataItem.dataContext.tokenString;
-        //         }
-        //         return text;
-        //     });
-        //
-        // let sbValueAxis = scrollbar.chart.yAxes.push(
-        //     am5xy.ValueAxis.new(root, {
-        //         renderer: am5xy.AxisRendererY.new(root, {}),
-        //     }),
-        // );
-        //
-        // var sbseries = scrollbar.chart.series.push(
-        //     am5xy.LineSeries.new(root, {
-        //         xAxis: sbXAxis,
-        //         yAxis: sbValueAxis,
-        //         valueYField: "y",
-        //         valueXField: "x",
-        //     }),
-        // );
-        // sbseries.data.setAll(data);
-        // let series2 = chart.series.push(
-        //     am5xy.LineSeries.new(root, {
-        //         name: "Perplexity",
-        //         xAxis: xAxis,
-        //         yAxis: yAxis,
-        //         valueYField: "perplexity",
-        //         categoryXField: "position",
-        //     }),
-        // );
-        // series2.data.setAll(data);
-
         // Add legend
         let legend = chart.children.push(am5.Legend.new(root, {}));
         legend.data.setAll(chart.series.values);
@@ -267,13 +212,51 @@ function Chart() {
         );
         cursor.lineY.set("visible", false);
 
-        // add scrollbar
         chart.set(
             "scrollbarX",
             am5.Scrollbar.new(root, {
                 orientation: "horizontal",
             }),
         );
+
+        // const scrollbar = chart.set(
+        //     "scrollbarX",
+        //     am5xy.XYChartScrollbar.new(root, {
+        //         orientation: "horizontal",
+        //         height: 50,
+        //     }),
+        // );
+        // let sbXAxis = scrollbar.chart.xAxes.push(
+        //     am5xy.CategoryAxis.new(root, {
+        //         renderer: am5xy.AxisRendererX.new(root, {}),
+        //         categoryField: "position",
+        //     }),
+        // );
+        // sbXAxis
+        //     .get("renderer")
+        //     .labels.template.adapters.add("text", function (text, target) {
+        //         if (target.dataItem && target.dataItem.dataContext) {
+        //             return (target.dataItem.dataContext as DataPoint)
+        //                 .tokenString;
+        //         }
+        //         return text;
+        //     });
+        //
+        // let sbValueAxis = scrollbar.chart.yAxes.push(
+        //     am5xy.ValueAxis.new(root, {
+        //         renderer: am5xy.AxisRendererY.new(root, {}),
+        //     }),
+        // );
+        //
+        // var sbseries = scrollbar.chart.series.push(
+        //     am5xy.LineSeries.new(root, {
+        //         xAxis: sbXAxis,
+        //         yAxis: sbValueAxis,
+        //         categoryXField: "position",
+        //         valueYField: "confidence",
+        //     }),
+        // );
+        // sbseries.data.setAll(data);
 
         chartRef.current = chart;
 
@@ -290,6 +273,7 @@ function Chart() {
                 x: token.position,
                 position: token.position + 1,
                 tokenString: visualizeWhitespace(token.token),
+                isPromptOrManual: token.prompt || token.manual || false,
                 confidence: token.confidence || 0,
                 perplexity: token.perplexity || 0,
                 lastPerplexity: token.lastPerplexity || 0,
@@ -298,15 +282,114 @@ function Chart() {
                 color: "#10b981",
             }));
 
+            const [lpplMin, lpplMax] = getOutliers(
+                data.map((d) => d.lastPerplexity),
+            );
+            const [pplMin, pplMax] = getOutliers(data.map((d) => d.perplexity));
+
+            for (const d of data) {
+                if (d.lastPerplexity < lpplMin) d.lastPerplexity = lpplMin;
+                if (d.lastPerplexity > lpplMax) d.lastPerplexity = lpplMax;
+                if (d.perplexity < pplMin) d.perplexity = pplMin;
+                if (d.perplexity > pplMax) d.perplexity = pplMax;
+            }
+
             chart.series.each((series) => {
                 series.data.setAll(data);
             });
 
+            // const scrollbar = chart.get("scrollbarX") as am5xy.XYChartScrollbar;
+            // if (scrollbar) {
+            //     console.log("Updating scrollbar data");
+            //     scrollbar.chart.series.each((series) => {
+            //         series.data.setAll(data);
+            //     });
+            // }
+            //
+            const lastPromptOrManualTokenIndex = data
+                .map((d) => d.isPromptOrManual)
+                .lastIndexOf(true);
+            const lastPromptOrManualToken =
+                currentGeneration[lastPromptOrManualTokenIndex];
+
             chart.xAxes.each((xAxis) => {
                 xAxis.data.setAll(data);
             });
+            const xAxis = chart.xAxes.getIndex(0);
+
+            if (xAxis) {
+                if (xAxis.axisRanges.length > 0) {
+                    xAxis.axisRanges.clear();
+                }
+                if (lastPromptOrManualToken) {
+                    const rangeDataItem = xAxis.makeDataItem({
+                        category: data[0].position,
+                        endCategory: lastPromptOrManualToken.position + 1,
+                    });
+
+                    const color = am5.color(0xff621f);
+                    xAxis.createAxisRange(rangeDataItem);
+                    const axisFill = rangeDataItem.get("axisFill");
+                    if (axisFill) {
+                        axisFill.setAll({
+                            stroke: color,
+                            strokeWidth: 1,
+                            strokeOpacity: 1,
+                            fill: color,
+                            fillOpacity: 0.05,
+                            visible: true,
+                        });
+                    }
+                    const label = rangeDataItem.get("label");
+                    if (label) {
+                        label.setAll({
+                            text: "Prompt",
+                            inside: true,
+                            rotation: 0,
+                            centerY: am5.p50,
+                            centerX: am5.p50,
+                            height: 400,
+                            location: 0.5,
+                            fill: color,
+                        });
+                    }
+                }
+                if (selectedToken) {
+                    const rangeDataItem = xAxis.makeDataItem({
+                        category: selectedToken.position,
+                    });
+
+                    const color = am5.color(0x1e90ff);
+                    xAxis.createAxisRange(rangeDataItem);
+
+                    const axisFill = rangeDataItem.get("axisFill");
+                    if (axisFill) {
+                        axisFill.setAll({
+                            stroke: color,
+                            strokeWidth: 1,
+                            strokeOpacity: 1,
+                            fill: color,
+                            fillOpacity: 0.05,
+                            visible: true,
+                        });
+                    }
+                    const label = rangeDataItem.get("label");
+                    if (label) {
+                        label.setAll({
+                            text: "Selected Token",
+                            inside: true,
+                            rotation: 0,
+                            centerY: am5.p50,
+                            centerX: am5.p50,
+                            height: 400,
+                            location: 0.5,
+                            fill: color,
+                        });
+                    }
+                }
+            }
         }
-    }, [currentGeneration.length]);
+    }, [currentGeneration.length, selectedToken, 2]);
 
     return <div id="chartdiv" style={{ width: "100%", height: "100%" }}></div>;
 }

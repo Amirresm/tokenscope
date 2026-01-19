@@ -23,6 +23,9 @@ export default function StatsSidebar() {
         generationStore.perplexityTenPercentiles.value;
     const lastPerplexityTenPercentiles =
         generationStore.lastPerplexityTenPercentiles.value;
+    const marginConfidenceTenPercentiles =
+        generationStore.marginConfidenceTenPercentiles.value;
+    const entropyTenPercentiles = generationStore.entropyTenPercentiles.value;
 
     const stats = React.useMemo(() => {
         const tokens = currentGeneration.filter(
@@ -171,6 +174,56 @@ export default function StatsSidebar() {
                             <div className="stat-title">Confidence StdDev</div>
                             <div className="stat-value">
                                 {stats.confStdev.toFixed(2)}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Confidence Percentiles
+                            </div>
+                            <div className="stat-value text-sm">
+                                {confidenceTenPercentiles
+                                    .map((p) => p.toFixed(2))
+                                    .join(", ")}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Perplexity Percentiles
+                            </div>
+                            <div className="stat-value text-sm">
+                                {perplexityTenPercentiles
+                                    .map((p) => p.toFixed(2))
+                                    .join(", ")}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Last Perplexity Percentiles
+                            </div>
+                            <div className="stat-value text-sm">
+                                {lastPerplexityTenPercentiles
+                                    .map((p) => p.toFixed(2))
+                                    .join(", ")}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Margin Confidence Percentiles
+                            </div>
+                            <div className="stat-value text-sm">
+                                {marginConfidenceTenPercentiles
+                                    .map((p) => p.toFixed(2))
+                                    .join(", ")}
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Entropy Percentiles
+                            </div>
+                            <div className="stat-value text-sm">
+                                {entropyTenPercentiles
+                                    .map((p) => p.toFixed(2))
+                                    .join(", ")}
                             </div>
                         </div>
                     </div>

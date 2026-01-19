@@ -62,30 +62,23 @@ export function GenerationSettingsDropdown() {
                     <label className="input w-24">
                         <input
                             type="number"
+                            step="0.01"
                             value={generationSettings.topP}
                             onChange={(e) =>
-                                handleSettingChange(
-                                    "topP",
-                                    e.target.value === ""
-                                        ? undefined
-                                        : parseInt(e.target.value),
-                                )
+                                handleSettingChange("topP", e.target.value)
                             }
                         />
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Coeff</span>
+                    <span className="text-neutral-300">Temperature</span>
                     <label className="input w-24">
                         <input
                             type="number"
-                            step="0.1"
-                            value={generationSettings.coeff}
+                            step="0.01"
+                            value={generationSettings.temp}
                             onChange={(e) =>
-                                handleSettingChange(
-                                    "coeff",
-                                    e.target.value
-                                )
+                                handleSettingChange("temp", e.target.value)
                             }
                         />
                     </label>

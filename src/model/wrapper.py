@@ -159,3 +159,22 @@ class QwenModelWrapper(ModelWrapper):
             ControlTokenTypes.FIM_SUFFIX: "<|fim_suffix|>",
             ControlTokenTypes.FIM_MIDDLE: "<|fim_middle|>",
         }
+
+
+class GenericModelWrapper(ModelWrapper):
+    def __init__(
+        self,
+        model_name: str,
+        device: str = "cuda",
+        model: Optional[ModelType] = None,
+        tokenizer: Optional[TokenizerType] = None,
+        q4bit: bool = False,
+    ):
+        super().__init__(model_name, device, model, tokenizer, q4bit)
+        if self.t.pad_token is None:
+            self.t.pad_token = self.t.eos_token
+        self.control_tokens = {
+            ControlTokenTypes.BOS: self.t.bos_token,
+            ControlTokenTypes.EOS: self.t.eos_token,
+            ControlTokenTypes.PAD: self.t.pad_token,
+        }

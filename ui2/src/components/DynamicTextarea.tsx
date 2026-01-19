@@ -7,9 +7,9 @@ const handleResize = (
 ) => {
     if (textarea) {
         const minHightExpanded = 150;
-        const maxHightExpanded = 250;
+        const maxHightExpanded = 500;
 
-        const minHightCollapsed = 250;
+        const minHightCollapsed = 150;
         const maxHightCollapsed = 500;
         const minHeight = collapsed ? minHightCollapsed : minHightExpanded;
         const maxHeight = collapsed ? maxHightCollapsed : maxHightExpanded;

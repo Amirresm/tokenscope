@@ -7,11 +7,15 @@ import {
 const currentGeneration = signal<GenerationToken[]>([]);
 const hasGeneration = computed(() => currentGeneration.value.length > 0);
 
+const paused = signal<boolean>(false);
+const isGenerating = signal<boolean>(false);
+const generationAbort = signal<AbortController>();
+
 export type GenerationSettings = {
     maxTokens: number;
     topK: number;
-    topP: number;
-    coeff: string;
+    topP: string;
+    temp: string;
     alternatives: number;
     attentionLayer: number;
     attentionTopN: number;
@@ -19,8 +23,8 @@ export type GenerationSettings = {
 const generationSettings = signal<GenerationSettings>({
     maxTokens: 256,
     topK: 1,
-    topP: 0,
-    coeff: "1.0",
+    topP: "1",
+    temp: "1",
     alternatives: 5,
     attentionLayer: -1,
     attentionTopN: 10,
@@ -98,6 +102,15 @@ const lastGeneratedToken = computed(() => {
     if (!hasGeneration.value) return null;
     return generation[generation.length - 1];
 });
+
+const confidenceDomain = signal<[number, number]>([-1, 1]);
+const perplexityDomain = signal<[number, number]>([-1, Infinity]);
+const lastPerplexityDomain = signal<[number, number]>([-1, Infinity]);
+const confidenceTenPercentiles = signal<number[]>([]);
+const perplexityTenPercentiles = signal<number[]>([]);
+const lastPerplexityTenPercentiles = signal<number[]>([]);
+const marginConfidenceTenPercentiles = signal<number[]>([]);
+const entropyTenPercentiles = signal<number[]>([]);
 
 const fimStartToken = signal<number | null>(null);
 const fimEndToken = signal<number | null>(null);
@@ -185,6 +198,30 @@ const clearAttentionTargetToken = () => {
     });
 };
 
+const resetGenerationStore = () => {
+    clearGeneration();
+    selectedToken.value = undefined;
+
+    confidenceDomain.value = [-1, 1];
+    perplexityDomain.value = [-1, Infinity];
+    lastPerplexityDomain.value = [-1, Infinity];
+    confidenceTenPercentiles.value = [];
+    perplexityTenPercentiles.value = [];
+    lastPerplexityTenPercentiles.value = [];
+    marginConfidenceTenPercentiles.value = [];
+    entropyTenPercentiles.value = [];
+
+    clearFimState();
+
+    attentionTargetToken.value = null;
+    attentionTargetHead.value = "mean";
+    attentionVisibleRange.value = [0, 1];
+
+    paused.value = false;
+    isGenerating.value = false;
+    generationAbort.value = undefined;
+};
+
 export default {
     generationSettings,
     updateGenerationSettings,
@@ -198,14 +235,14 @@ export default {
     previousToken,
     lastGeneratedToken,
 
-    confidenceDomain: signal<[number, number]>([-1, 1]),
-    perplexityDomain: signal<[number, number]>([-1, Infinity]),
-    lastPerplexityDomain: signal<[number, number]>([-1, Infinity]),
-    confidenceTenPercentiles: signal<number[]>([]),
-    perplexityTenPercentiles: signal<number[]>([]),
-    lastPerplexityTenPercentiles: signal<number[]>([]),
-    marginConfidenceTenPercentiles: signal<number[]>([]),
-    entropyTenPercentiles: signal<number[]>([]),
+    confidenceDomain,
+    perplexityDomain,
+    lastPerplexityDomain,
+    confidenceTenPercentiles,
+    perplexityTenPercentiles,
+    lastPerplexityTenPercentiles,
+    marginConfidenceTenPercentiles,
+    entropyTenPercentiles,
 
     attentionTargetToken,
     attentionTargetHead,
@@ -217,9 +254,9 @@ export default {
 
     hasGeneration,
 
-    paused: signal<boolean>(false),
-    isGenerating: signal<boolean>(false),
-    generationAbort: signal<AbortController>(),
+    paused,
+    isGenerating,
+    generationAbort,
 
     fimStartToken,
     fimEndToken,
@@ -227,4 +264,6 @@ export default {
     setFimStartToken,
     setFimEndToken,
     updateFimIndices,
+
+    resetGenerationStore,
 };

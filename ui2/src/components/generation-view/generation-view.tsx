@@ -103,13 +103,11 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
 
     const metricValue = React.useMemo(() => {
         if (metric === "confidence") return confidence;
-        if (metric === "perplexity") return perplexity || -1;
-        if (metric === "lastPerplexity") return lastPerplexity || -1;
+        if (metric === "perplexity") return perplexity ?? -1;
+        if (metric === "lastPerplexity") return lastPerplexity ?? -1;
         if (metric === "marginConfidence")
-            return generationToken.marginConfidence === undefined
-                ? -1
-                : generationToken.marginConfidence;
-        if (metric === "entropy") return generationToken.entropy || -1;
+            return generationToken.marginConfidence ?? -1;
+        if (metric === "entropy") return generationToken.entropy ?? -1;
         return -1;
     }, [metric, confidence, perplexity]);
 
@@ -242,7 +240,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
                 </span>
             )}
             <div
-                className="tooltip tooltip-right inline"
+                className="tooltip tooltip-left inline"
                 data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(3)}`}
             >
                 {isSelected ? visualizeWhitespace(token) : token}
