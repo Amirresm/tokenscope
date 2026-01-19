@@ -1,6 +1,6 @@
 from enum import Enum
-import os
 from typing import Optional, Tuple
+from tokenizers import AddedToken
 import torch
 import gc
 
@@ -19,14 +19,14 @@ type TokenizerType = LlamaTokenizerFast
 class ControlTokenTypes(Enum):
     BOS = "bos_token"
     EOS = "eos_token"
-    BOH = "boh_token"
-    EOH = "eoh_token"
-    EOM = "eom_token"
-    PYTHON = "python_token"
-
-    FIM_PREFIX = "fim_prefix_token"
-    FIM_SUFFIX = "fim_suffix_token"
-    FIM_MIDDLE = "fim_middle_token"
+    # BOH = "boh_token"
+    # EOH = "eoh_token"
+    # EOM = "eom_token"
+    # PYTHON = "python_token"
+    #
+    # FIM_PREFIX = "fim_prefix_token"
+    # FIM_SUFFIX = "fim_suffix_token"
+    # FIM_MIDDLE = "fim_middle_token"
 
     PAD = "pad_token"
 
@@ -102,11 +102,31 @@ class ModelWrapper:
         id = int(id[0]) if isinstance(id, list) else int(id)
         return (token, id)
 
-    def get_control_token_type(self, token: str) -> ControlTokenTypes | None:
-        ttype = next(
-            (k for k, v in self.control_tokens.items() if v == token), None
-        )
-        return ttype
+    def get_control_token_type(
+        self, token: str
+    ) ->  str | None:
+        # ttype = next(
+        #     (k for k, v in self.control_tokens.items() if v == token), None
+        # )
+        # if ttype is not None:
+        #     return ttype
+
+        # strip to avoid matching new lines or spaces
+        clean_token = token.strip()
+
+        for k, v in self.t.special_tokens_map.items():
+            if v == clean_token:
+                return k
+
+        for v in self.t.added_tokens_decoder.values():
+            if v.content == clean_token:
+                return v.content
+
+        for v in self.t.added_tokens_encoder.keys():
+            if v == clean_token:
+                return v
+
+        return None
 
     def reset(self):
         gc.collect()
@@ -135,10 +155,10 @@ class LlamaModelWrapper(ModelWrapper):
         self.control_tokens = {
             ControlTokenTypes.BOS: self.t.bos_token,
             ControlTokenTypes.EOS: self.t.eos_token,
-            ControlTokenTypes.BOH: "<|start_header_id|>",
-            ControlTokenTypes.EOH: "<|end_header_id|>",
-            ControlTokenTypes.EOM: "<|eom_id|>",
-            ControlTokenTypes.PYTHON: "<|python_tag|>",
+            # ControlTokenTypes.BOH: "<|start_header_id|>",
+            # ControlTokenTypes.EOH: "<|end_header_id|>",
+            # ControlTokenTypes.EOM: "<|eom_id|>",
+            # ControlTokenTypes.PYTHON: "<|python_tag|>",
         }
 
 
@@ -155,9 +175,9 @@ class QwenModelWrapper(ModelWrapper):
         self.control_tokens = {
             ControlTokenTypes.BOS: self.t.bos_token,
             ControlTokenTypes.EOS: self.t.eos_token,
-            ControlTokenTypes.FIM_PREFIX: "<|fim_prefix|>",
-            ControlTokenTypes.FIM_SUFFIX: "<|fim_suffix|>",
-            ControlTokenTypes.FIM_MIDDLE: "<|fim_middle|>",
+            # ControlTokenTypes.FIM_PREFIX: "<|fim_prefix|>",
+            # ControlTokenTypes.FIM_SUFFIX: "<|fim_suffix|>",
+            # ControlTokenTypes.FIM_MIDDLE: "<|fim_middle|>",
         }
 
 

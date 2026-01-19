@@ -16,7 +16,6 @@ export function LandingPage() {
     const selectedProject = projectsStore.selectedProject.value
     const sampleInfo = projectsStore.selectedSampleInfo.value;
 
-    console.log(selectedProject, sampleInfo);
     const newSession = (!sessionId || !branchId) && (!selectedProject || !sampleInfo);
 
     if (newSession) {

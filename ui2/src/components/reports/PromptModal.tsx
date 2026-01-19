@@ -103,10 +103,35 @@ function Content() {
 }
 
 export function PromptModal() {
+    const [isInView, setIsInView] = React.useState(false);
+
+    React.useEffect(() => {
+        const dialog = document.getElementById(
+            "prompt_modal",
+        ) as HTMLDialogElement;
+
+        const observer = new MutationObserver(() => {
+            if (dialog.open) {
+                setIsInView(true);
+            } else {
+                setIsInView(false);
+            }
+        });
+
+        observer.observe(dialog, {
+            attributes: true,
+            attributeFilter: ["open"],
+        });
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
     return (
         <dialog id="prompt_modal" className="modal">
             <div className="modal-box h-[80vh] w-10/12 max-w-10/12">
-                <Content />
+                {isInView && <Content />}
             </div>
             <form method="dialog" className="modal-backdrop">
                 <button>close</button>

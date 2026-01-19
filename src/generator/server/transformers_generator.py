@@ -170,6 +170,7 @@ class BatchGenerator(Generator):
             padding="longest",
             max_length=512,
             return_tensors="pt",
+            add_special_tokens=False,
         ).to(self.device)
         input_ids: torch.Tensor = tokenized.input_ids
 
@@ -188,10 +189,13 @@ class BatchGenerator(Generator):
                 control_type = self.model.get_control_token_type(token)
                 if control_type is not None:
                     tags.append("special")
-                    if control_type == ControlTokenTypes.EOS:
-                        tags.append(ControlTokenTypes.PAD.name.lower())
+                    if isinstance(control_type, ControlTokenTypes):
+                        if control_type == ControlTokenTypes.EOS:
+                            tags.append(ControlTokenTypes.PAD.name.lower())
+                        else:
+                            tags.append(control_type.name.lower())
                     else:
-                        tags.append(control_type.name.lower())
+                        tags.append(control_type)
 
                 perplexity = None
                 if calc_perplexity:
@@ -214,7 +218,7 @@ class BatchGenerator(Generator):
                     margin_confidence=None,
                     entropy=None,
                     alternative_tokens=[],
-                    token_types=tags,
+                    token_types=list(set(tags)),
                 )
 
                 generation_results[i].append(prompt_step_result)
@@ -245,10 +249,13 @@ class BatchGenerator(Generator):
                 tags = ["prompt"]
                 if control_type is not None:
                     tags.append("special")
-                    if control_type == ControlTokenTypes.EOS:
-                        tags.append(ControlTokenTypes.PAD.name.lower())
+                    if isinstance(control_type, ControlTokenTypes):
+                        if control_type == ControlTokenTypes.EOS:
+                            tags.append(ControlTokenTypes.PAD.name.lower())
+                        else:
+                            tags.append(control_type.name.lower())
                     else:
-                        tags.append(control_type.name.lower())
+                        tags.append(control_type)
 
                 perplexity = None
                 if calc_perplexity:
@@ -271,7 +278,7 @@ class BatchGenerator(Generator):
                     margin_confidence=None,
                     entropy=None,
                     alternative_tokens=[],
-                    token_types=tags,
+                    token_types=list(set(tags)),
                 )
 
                 generation_results[i].append(prompt_step_result)
@@ -384,6 +391,17 @@ class BatchGenerator(Generator):
                 if decoded_token == self.model.t.bos_token:
                     token_types.append("bos")
 
+            control_type = self.model.get_control_token_type(decoded_token)
+            if control_type is not None:
+                token_types.append("special")
+                if isinstance(control_type, ControlTokenTypes):
+                    if control_type == ControlTokenTypes.EOS:
+                        token_types.append(ControlTokenTypes.PAD.name.lower())
+                    else:
+                        token_types.append(control_type.name.lower())
+                else:
+                    token_types.append(control_type)
+
             attention_snapshot = (
                 attention_results[batch_index] if attention_results else None
             )
@@ -398,7 +416,7 @@ class BatchGenerator(Generator):
                 last_perplexity=last_perplexity,
                 margin_confidence=margin_confidence,
                 entropy=entropy,
-                token_types=token_types,
+                token_types=list(set(token_types)),
                 alternative_tokens=[
                     Token(
                         position=-1,
@@ -416,7 +434,7 @@ class BatchGenerator(Generator):
                 ],
                 attention_snapshot=attention_snapshot,
             )
-            should_stop = self._check_stop_token(decoded_token)
+            should_stop = self._check_stop_token(step_result)
             step_tokens.append((step_result, should_stop))
 
         return step_tokens, input_ids, attention_mask, output.past_key_values
@@ -652,12 +670,13 @@ class BatchGenerator(Generator):
         )
         print("\n", "=" * 80)
 
-    def _check_stop_token(self, token):
-        ttype = self.model.get_control_token_type(token)
+    def _check_stop_token(self, token: Token):
+        ttype = self.model.get_control_token_type(token.token_string)
         if (
             ttype in self.stop_tokens
             or token in self.stop_tokens
-            or self.model.get_control_token_type(token) == ControlTokenTypes.EOS
+            or "stop" in token.token_types
+            or ttype == ControlTokenTypes.EOS
         ):
             return True
         return False

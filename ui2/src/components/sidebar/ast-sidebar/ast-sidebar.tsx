@@ -64,17 +64,6 @@ export default function AstSidebar() {
                     className="btn btn-ghost btn-secondary mb-4"
                     onClick={() => {
                         const modal = document.getElementById(
-                            "ast_attention_heatmap_modal",
-                        ) as HTMLDialogElement;
-                        modal.showModal();
-                    }}
-                >
-                    Show Attention Heatmap
-                </button>
-                <button
-                    className="btn btn-ghost btn-secondary mb-4"
-                    onClick={() => {
-                        const modal = document.getElementById(
                             "ast_stats_chart_modal",
                         ) as HTMLDialogElement;
                         modal.showModal();
@@ -82,7 +71,17 @@ export default function AstSidebar() {
                 >
                     Show Stats Chart
                 </button>
-
+                <button
+                    className="btn btn-ghost btn-secondary mb-4"
+                    onClick={() => {
+                        const modal = document.getElementById(
+                            "ast_attention_heatmap_modal",
+                        ) as HTMLDialogElement;
+                        modal.showModal();
+                    }}
+                >
+                    Show Attention Heatmap
+                </button>
                 <h2 className="font-semibold">AST {astViewMode} Stats</h2>
                 <div>
                     <ul className="list-disc list-inside">

@@ -295,79 +295,111 @@ export function ASTAttentionHeatmapModal() {
         return Object.keys(firstWithAttention.attentionSnapshot!);
     }, [currentGeneration]);
 
+    const [isInView, setIsInView] = React.useState(false);
+
+    React.useEffect(() => {
+        const dialog = document.getElementById(
+            "ast_attention_heatmap_modal",
+        ) as HTMLDialogElement;
+
+        const observer = new MutationObserver(() => {
+            if (dialog.open) {
+                setIsInView(true);
+            } else {
+                setIsInView(false);
+            }
+        });
+
+        observer.observe(dialog, {
+            attributes: true,
+            attributeFilter: ["open"],
+        });
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
     return (
         <dialog id="ast_attention_heatmap_modal" className="modal">
             <div className="modal-box h-[90vh] w-11/12 max-w-11/12">
-                <div className="flex flex-col h-full">
-                    <div tabIndex={0} />
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="dropdown dropdown-bottom">
-                            <div
-                                tabIndex={0}
-                                role="button"
-                                className="btn btn-sm"
-                            >
-                                <span
-                                    className={`${attentionTargetHeadOptions.length === 0 ? "text-gray-500" : ""}`}
+                {isInView && (
+                    <div className="flex flex-col h-full">
+                        <div tabIndex={0} />
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="dropdown dropdown-bottom">
+                                <div
+                                    tabIndex={0}
+                                    role="button"
+                                    className="btn btn-sm"
                                 >
-                                    Head {attentionTargetHead}
-                                </span>
-                            </div>
-                            <ul
-                                tabIndex={0}
-                                className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                            >
-                                {attentionTargetHeadOptions.map((option) => (
-                                    <li
-                                        key={option}
-                                        onClick={() =>
-                                            generationStore.setAttentionTargetHead(
-                                                option,
-                                            )
-                                        }
+                                    <span
+                                        className={`${attentionTargetHeadOptions.length === 0 ? "text-gray-500" : ""}`}
                                     >
-                                        <a>{option}</a>
-                                    </li>
-                                ))}
-                            </ul>
+                                        Head {attentionTargetHead}
+                                    </span>
+                                </div>
+                                <ul
+                                    tabIndex={0}
+                                    className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                                >
+                                    {attentionTargetHeadOptions.map(
+                                        (option) => (
+                                            <li
+                                                key={option}
+                                                onClick={() =>
+                                                    generationStore.setAttentionTargetHead(
+                                                        option,
+                                                    )
+                                                }
+                                            >
+                                                <a>{option}</a>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            </div>
+                            <div className="dropdown dropdown-bottom">
+                                <div
+                                    tabIndex={0}
+                                    role="button"
+                                    className="btn btn-sm"
+                                >
+                                    AST Mode: {astViewMode}
+                                </div>
+                                <ul
+                                    tabIndex={0}
+                                    className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                                >
+                                    {Object.values(ViewModesEnum).map(
+                                        (mode) => (
+                                            <li
+                                                key={mode}
+                                                onClick={() => {
+                                                    astStore.astViewMode.value =
+                                                        mode;
+                                                }}
+                                            >
+                                                <a
+                                                    className={
+                                                        astViewMode === mode
+                                                            ? "font-bold"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {mode}
+                                                </a>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            </div>
                         </div>
-                        <div className="dropdown dropdown-bottom">
-                            <div
-                                tabIndex={0}
-                                role="button"
-                                className="btn btn-sm"
-                            >
-                                AST Mode: {astViewMode}
-                            </div>
-                            <ul
-                                tabIndex={0}
-                                className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                            >
-                                {Object.values(ViewModesEnum).map((mode) => (
-                                    <li
-                                        key={mode}
-                                        onClick={() => {
-                                            astStore.astViewMode.value = mode;
-                                        }}
-                                    >
-                                        <a
-                                            className={
-                                                astViewMode === mode
-                                                    ? "font-bold"
-                                                    : ""
-                                            }
-                                        >
-                                            {mode}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
+                        <div className="flex-grow min-h-0">
+                            <Chart />
                         </div>
                     </div>
-                    <div className="flex-grow min-h-0">
-                        <Chart />
-                    </div>
-                </div>
+                )}
             </div>
             <form method="dialog" className="modal-backdrop">
                 <button>close</button>

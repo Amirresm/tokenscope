@@ -108,6 +108,7 @@ function Header({ token }: { token: GenerationToken }) {
             >
                 Clear
             </button>
+            <div className="basis-full h-4" />
             <button
                 className="btn btn-ghost btn-sm"
                 onClick={() =>
@@ -220,24 +221,28 @@ function Content({ token }: { token: GenerationToken }) {
         <div className="p-4 flex flex-col gap-2">
             <Navigation token={token} />
             <Header token={token} />
-            <div className="flex flex-col gap-2">
-                {token.relativeAttention !== undefined ? (
-                    <div className="text-sm">
-                        Relative Attention:{" "}
-                        {token.relativeAttention?.toFixed(3)}
-                    </div>
-                ) : (
-                    <div className="text-sm italic text-gray-500">
-                        Relative Attention Not Available
-                    </div>
-                )}
-            </div>
+            <button
+                className="btn btn-ghost mt-4"
+                onClick={() => {
+                    const modal = document.getElementById(
+                        "relative_attention_modal",
+                    ) as HTMLDialogElement;
+                    modal.showModal();
+                }}
+            >
+                Show Relative Attention Chart
+            </button>
             <div className="divider my-2" />
             <table className="table-auto w-full text-sm">
                 <tbody>
                     <tr>
                         <td>Total Attention</td>
-                        <td>{((avgInputAttn * numInputs) + (avgOutputAttn * numOutputs)).toFixed(3)}</td>
+                        <td>
+                            {(
+                                avgInputAttn * numInputs +
+                                avgOutputAttn * numOutputs
+                            ).toFixed(3)}
+                        </td>
                     </tr>
                     <tr>
                         <td>Total Attention to Inputs</td>
@@ -247,7 +252,7 @@ function Content({ token }: { token: GenerationToken }) {
                         <td>Total Attention to Outputs</td>
                         <td>{(avgOutputAttn * numOutputs).toFixed(3)}</td>
                     </tr>
-                    
+
                     <tr>
                         <td>Number of Input Tokens</td>
                         <td>{numInputs}</td>

@@ -17,6 +17,7 @@ import { PromptModal } from "./components/reports/PromptModal";
 import globalStore from "./store/components/globalStore";
 import { ASTStatsChartModal } from "./components/reports/AstStatsChart";
 import { ASTAttentionHeatmapModal } from "./components/reports/AstAttentionHeatmap";
+import { RelativeAttentionModal } from "./components/reports/RelativeAttentionChart";
 
 const genTabs = [
     { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
@@ -62,6 +63,7 @@ function App() {
                 <div className="grow min-w-0">
                     <LLMManagementModal />
                     <TrendChartModal />
+                    <RelativeAttentionModal />
                     <ASTStatsChartModal />
                     <ASTAttentionHeatmapModal />
                     <PromptModal />

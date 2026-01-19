@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from "react";
+import React, { useRef, useLayoutEffect } from "react";
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
@@ -395,10 +395,35 @@ function Chart() {
 }
 
 export function TrendChartModal() {
+    const [isInView, setIsInView] = React.useState(false);
+
+    React.useEffect(() => {
+        const dialog = document.getElementById(
+            "trend_modal",
+        ) as HTMLDialogElement;
+
+        const observer = new MutationObserver(() => {
+            if (dialog.open) {
+                setIsInView(true);
+            } else {
+                setIsInView(false);
+            }
+        });
+
+        observer.observe(dialog, {
+            attributes: true,
+            attributeFilter: ["open"],
+        });
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
     return (
         <dialog id="trend_modal" className="modal">
             <div className="modal-box h-[90vh] w-11/12 max-w-11/12">
-                <Chart />
+                {isInView && <Chart />}
             </div>
             <form method="dialog" className="modal-backdrop">
                 <button>close</button>
