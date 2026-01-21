@@ -3,6 +3,8 @@ import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
+import am5themes_Material from "@amcharts/amcharts5/themes/Material";
+import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
 import astStore, { ViewModesEnum } from "../../store/components/astStore";
 import generationStore from "../../store/generationStore";
 
@@ -23,10 +25,18 @@ function Chart() {
     useLayoutEffect(() => {
         const root = am5.Root.new("astAttentionHeatmapdiv");
 
-        root.setThemes([
+        const darkMode =
+            document.documentElement.getAttribute("data-theme") === "dark";
+
+        const themes: any[] = [
             am5themes_Animated.new(root),
-            am5themes_Dark.new(root),
-        ]);
+            am5themes_Material.new(root),
+        ];
+
+        if (darkMode) {
+            themes.push(am5themes_Dark.new(root));
+        }
+        root.setThemes(themes);
 
         const chart = root.container.children.push(
             am5xy.XYChart.new(root, {
@@ -36,8 +46,19 @@ function Chart() {
                 wheelY: "none",
                 paddingLeft: 0,
                 layout: root.verticalLayout,
+                background: am5.Rectangle.new(root, {
+                    fill: darkMode ? am5.color(0x090909) : am5.color(0xffffff),
+                    fillOpacity: 1,
+                }),
             }),
         );
+
+        am5plugins_exporting.Exporting.new(root, {
+            menu: am5plugins_exporting.ExportingMenu.new(root, {}),
+            pngOptions: {
+                maintainPixelRatio: true,
+            },
+        });
 
         const yRenderer = am5xy.AxisRendererY.new(root, {
             visible: false,
@@ -61,6 +82,9 @@ function Chart() {
             minGridDistance: 30,
             opposite: true,
             minorGridEnabled: true,
+        });
+        xRenderer.labels.template.setAll({
+            paddingTop: 15,
         });
 
         xRenderer.grid.template.set("visible", false);
@@ -145,10 +169,6 @@ function Chart() {
                 Record<string, number[]>
             > = {};
             const groupNameKey = "group";
-            console.log(
-                "Generating AST Attention Heatmap for head:",
-                attentionTargetHead,
-            );
 
             if (attentionTargetHead) {
                 for (const group of astGroups) {
@@ -197,9 +217,9 @@ function Chart() {
                                     console.error(
                                         "Target group not found for attention mapping",
                                     );
-                                    throw new Error(
-                                        "Target group not found for attention mapping",
-                                    );
+                                    // throw new Error(
+                                    //     "Target group not found for attention mapping",
+                                    // );
                                 }
                                 if (
                                     !(
@@ -233,8 +253,6 @@ function Chart() {
                     }
                 }
 
-                console.log("Filled Avg Attention Map:", filledAvgAttentionMap);
-
                 for (const [sourceGroupId, targets] of Object.entries(
                     filledAvgAttentionMap,
                 )) {
@@ -253,19 +271,35 @@ function Chart() {
                 }
             }
 
+            const xAxisKey = groupIds.map((id) => ({ targetGroupId: id }));
+            const yAxisKey = groupIds.map((id) => ({ sourceGroupId: id }));
+
+            // for (const x of xAxisKey) {
+            //     for (const y of yAxisKey) {
+            //         const exists = data.find(
+            //             (d) =>
+            //                 d.sourceGroupId === y.sourceGroupId &&
+            //                 d.targetGroupId === x.targetGroupId,
+            //         );
+            //         if (!exists) {
+            //             data.push({
+            //                 sourceGroupId: y.sourceGroupId,
+            //                 targetGroupId: x.targetGroupId,
+            //                 value: 0,
+            //             });
+            //         }
+            //     }
+            // }
+
             chart.series.each((series) => {
                 series.data.setAll(data);
             });
 
             chart.xAxes.each((xAxis) => {
-                xAxis.data.setAll(
-                    groupIds.map((id) => ({ targetGroupId: id })),
-                );
+                xAxis.data.setAll(xAxisKey);
             });
             chart.yAxes.each((yAxis) => {
-                yAxis.data.setAll(
-                    groupIds.map((id) => ({ sourceGroupId: id })),
-                );
+                yAxis.data.setAll(yAxisKey);
             });
             console.log("AST Attention Heatmap data set:", data, groupIds);
         }
@@ -395,7 +429,7 @@ export function ASTAttentionHeatmapModal() {
                                 </ul>
                             </div>
                         </div>
-                        <div className="flex-grow min-h-0">
+                        <div className="grow min-h-0">
                             <Chart />
                         </div>
                     </div>

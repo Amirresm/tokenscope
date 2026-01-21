@@ -15,26 +15,26 @@ const defaultColorMap = {
 };
 
 const normalColorMap = {
-    0: "text-red-300",
-    0.2: "text-orange-300",
-    0.4: "text-yellow-300",
+    0: "text-[var(--grade-1)]",
+    0.2: "text-[var(--grade-2)]",
+    0.4: "text-[var(--grade-3)]",
     0.6: "",
 };
 
 const verboseColorMap = {
-    0: "text-red-300",
-    0.2: "text-orange-300",
-    0.4: "text-yellow-300",
-    0.6: "text-green-300",
-    0.8: "text-blue-300",
+    0: "text-[var(--grade-1)]",
+    0.2: "text-[var(--grade-2)]",
+    0.4: "text-[var(--grade-3)]",
+    0.6: "text-[var(--grade-4)]",
+    0.8: "text-[var(--grade-5)]",
 };
 
 const attentionColorMap = {
-    "-0.001": "border-red-300",
-    0.25: "border-orange-300",
-    0.5: "border-yellow-300",
-    0.75: "border-green-300",
-    0.999: "border-blue-300",
+    "-0.001": "border-[var(--grade-1)]",
+    0.25: "border-[var(--grade-2)]",
+    0.5: "border-[var(--grade-3)]",
+    0.75: "border-[var(--grade-4)]",
+    0.999: "border-[var(--grade-5)]",
 };
 
 function visualizeWhitespace(str: string) {
@@ -49,7 +49,8 @@ type Metric =
     | "perplexity"
     | "lastPerplexity"
     | "marginConfidence"
-    | "entropy";
+    | "entropy"
+    | "attentionSaliency";
 
 type GenerationTokenProps = {
     generationToken: GenerationToken;
@@ -62,6 +63,7 @@ type GenerationTokenProps = {
     isOnlyFimSelected?: boolean;
     isAttentionTarget?: boolean;
     attentionVisibleRange?: number[];
+    attentionTargetHead: string;
 };
 
 const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
@@ -76,6 +78,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         isOnlyFimSelected,
         isAttentionTarget,
         attentionVisibleRange,
+        attentionTargetHead,
     } = props;
 
     const {
@@ -108,16 +111,25 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
         if (metric === "marginConfidence")
             return generationToken.marginConfidence ?? -1;
         if (metric === "entropy") return generationToken.entropy ?? -1;
+        if (metric === "attentionSaliency") {
+            return (
+                generationToken.attentionSaliences[attentionTargetHead] ?? -1
+            );
+        }
         return -1;
-    }, [metric, confidence, perplexity]);
+    }, [metric, confidence, perplexity, attentionTargetHead]);
 
     const textColor = React.useMemo(() => {
         if (metricValue === -1) return "text-gray-400";
-        if (prompt && !metric.toLowerCase().includes("perplexity"))
-            return "text-gray-400";
+        if (
+            prompt &&
+            !metric.toLowerCase().includes("perplexity") &&
+            metric !== "attentionSaliency"
+        )
+            return "text-[var(--grade-0)]";
         if (manual && !metric.toLowerCase().includes("perplexity")) {
             if (tokenTypes.includes("prefix")) return "text-stone-400";
-            return "text-gray-400";
+            return "text-[var(--grade-0)]";
         }
         const reversed =
             metric.toLowerCase().includes("perplexity") ||
@@ -240,8 +252,8 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
                 </span>
             )}
             <div
-                className="tooltip tooltip-left inline"
-                data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(3)}`}
+                className="tooltip tooltip-bottom inline"
+                data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(6)}`}
             >
                 {isSelected ? visualizeWhitespace(token) : token}
             </div>
@@ -259,7 +271,7 @@ type GenerationListProps = {
     fimStartTokenIndex: number | null;
     fimEndTokenIndex: number | null;
     attentionTargetTokenIndex?: number;
-    attentionTargetHead?: string;
+    attentionTargetHead: string;
     attentionVisibleRange?: number[];
     specialTokenFilter?: boolean;
 };
@@ -318,6 +330,7 @@ const GenerationList = React.memo((props: GenerationListProps) => {
                 }
                 isAttentionTarget={token.position === attentionTargetTokenIndex}
                 attentionVisibleRange={attentionVisibleRange}
+                attentionTargetHead={attentionTargetHead}
             />
         ));
 });
@@ -330,6 +343,18 @@ const GenerationView = () => {
     const showLineInfo = tokenLevelViewStore.config.value.showLineInfo;
     const specialTokenFilter =
         tokenLevelViewStore.config.value.specialTokenFilter;
+
+    const generationList = generationStore.currentGeneration.value;
+    const selectedToken = generationStore.selectedToken.value;
+    const isGenerating = generationStore.isGenerating.value;
+
+    const fimStartToken = generationStore.fimStartToken.value;
+    const fimEndToken = generationStore.fimEndToken.value;
+
+    const attentionTargetToken = generationStore.attentionTargetToken.value;
+    const attentionTargetHead =
+        generationStore.attentionTargetHead.value || "mean";
+    const attentionVisibleRange = generationStore.attentionVisibleRange.value;
 
     let metricPercetiles: number[] = [];
     switch (metric) {
@@ -350,20 +375,15 @@ const GenerationView = () => {
         case "entropy":
             metricPercetiles = generationStore.entropyTenPercentiles.value;
             break;
+        case "attentionSaliency":
+            metricPercetiles =
+                generationStore.attentionSaliencyTenPercentiles.value[
+                    attentionTargetHead
+                ] || [];
+            break;
         default:
             metricPercetiles = [];
     }
-
-    const generationList = generationStore.currentGeneration.value;
-    const selectedToken = generationStore.selectedToken.value;
-    const isGenerating = generationStore.isGenerating.value;
-
-    const fimStartToken = generationStore.fimStartToken.value;
-    const fimEndToken = generationStore.fimEndToken.value;
-
-    const attentionTargetToken = generationStore.attentionTargetToken.value;
-    const attentionTargetHead = generationStore.attentionTargetHead.value;
-    const attentionVisibleRange = generationStore.attentionVisibleRange.value;
 
     React.useEffect(() => {
         if (isGenerating) bottomRef.current?.scrollIntoView({});
@@ -371,10 +391,10 @@ const GenerationView = () => {
 
     return (
         <div
-            className="grow overflow-y-auto overflow-x-visible m-4 p-4"
+            className="grow p-4"
             onClick={() => (generationStore.selectedToken.value = undefined)}
         >
-            <div className="whitespace-pre-wrap wrap-break-word h-full">
+            <div className="whitespace-pre-wrap wrap-break-word">
                 <GenerationList
                     generationList={generationList}
                     colorVerbosity={colorVerbosity}

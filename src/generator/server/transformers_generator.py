@@ -480,7 +480,7 @@ class BatchGenerator(Generator):
 
             return (
                 float(seq_ppl.mean().detach().cpu().float().item()),
-                float(token_ppl.mean().detach().cpu().float().item()),
+                float(last_token_nll.mean().detach().cpu().float().item()),
             )
 
         else:
@@ -494,7 +494,7 @@ class BatchGenerator(Generator):
 
             return (
                 0,  # sequence perplexity undefined
-                float(token_ppl.mean().detach().cpu().float().item()),
+                float(nll.mean().detach().cpu().float().item()),
             )
 
     def _call_model_and_calculate_perplexity(

@@ -3,9 +3,10 @@ import { AstTokenInfo, AtomicBlock } from "../../models/ast";
 import "./GenericAstView.css";
 import { GenerationTokenData } from "../../models/generationToken";
 import { getUniqueColor } from "../../utils/unqiueColorGenerator";
-import generationStore from "../../store/generationStore";
-import globalStore from "../../store/components/globalStore";
-import astStore, { ViewModesEnum } from "../../store/components/astStore";
+import astStore, {
+    ASTColorVerbosityEnum,
+    ViewModesEnum,
+} from "../../store/components/astStore";
 
 function visualizeWhitespace(str: string) {
     return str;
@@ -15,16 +16,16 @@ function visualizeWhitespace(str: string) {
 }
 
 const verboseColorMap = {
-    0: "text-red-500",
-    0.1: "text-orange-500",
-    0.2: "text-red-300",
-    0.35: "text-yellow-500",
-    0.5: "text-orange-300",
-    0.65: "text-yellow-300",
-    0.75: "text-green-300",
-    0.85: "text-green-500",
-    0.9: "text-blue-400",
-    0.98: "text-blue-500",
+    0.0: "--ast-grade-0",
+    0.1: "--ast-grade-1",
+    0.2: "--ast-grade-2",
+    0.35: "--ast-grade-3",
+    0.5: "--ast-grade-4",
+    0.65: "--ast-grade-5",
+    0.75: "--ast-grade-6",
+    0.85: "--ast-grade-7",
+    0.9: "--ast-grade-8",
+    0.98: "--ast-grade-9",
 };
 
 const getConfidenceColorClass = (confidence: number) => {
@@ -57,7 +58,7 @@ export function GenericAstView({
     astTokens,
     groupingMode,
 }: GenericAstViewProps) {
-    const currentGeneration = generationStore.currentGeneration.value;
+    const astColorVerbosity = astStore.astColorVerbosity.value;
 
     const groups = React.useMemo(() => {
         const groups: {
@@ -130,26 +131,45 @@ export function GenericAstView({
         astStore.astGroups.value = groups;
     }, [groups]);
 
+    const getRangeColor = React.useCallback(
+        (token: GenerationTokenData) => {
+            const normalMode =
+                astColorVerbosity === ASTColorVerbosityEnum.NORMAL;
+            let color = "";
+            if (normalMode) {
+                color = getUniqueColor();
+            } else {
+                color = `var(${getConfidenceColorClass(
+                    parseFloat(token.confidence),
+                )})`;
+            }
+
+            return color;
+        },
+        [astColorVerbosity],
+    );
+
     return (
         <div className="min-h-0 grow overflow-y-auto whitespace-pre-wrap p-4">
             {groups.map((t, index) => (
                 <span
                     data-content={`#${index}: ${t.group}`}
-                    className={`atomic-block ${getConfidenceColorClass(
-                        t.averageConfidence,
-                    )}`}
+                    className={`atomic-block`}
+                    style={{
+                        color: getRangeColor(t.tokens[0]),
+                    }}
                     key={index}
                 >
                     {t.tokens.map((tk, itk) => (
                         <span
                             key={tk.token_string + tk.position}
-                            className="tooltip tooltip-right inline"
+                            className="tooltip tooltip-bottom inline before:z-50"
                             data-tip={`#${index} - ${itk}: ${t.group} (C: ${(parseFloat(tk.confidence) * 100).toFixed(2)}% | AC: ${(
                                 t.averageConfidence * 100
                             ).toFixed(2)}% for ${t.tokens.length} tokens)`}
                         >
                             <span
-                                className="hover:font-bold hover:text-white"
+                                className="hover:text-blue-400"
                                 onClick={() => {
                                     // TODO:
                                     // generationStore.selectedToken.value = tk;

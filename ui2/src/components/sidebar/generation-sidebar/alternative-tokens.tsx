@@ -65,7 +65,7 @@ export default function AlternativeTokens({
 
     return (
         <div>
-            <div className="text-xl text-secondary-content">
+            <div className="text-xl">
                 Alternate Tokens
             </div>
             <div className="mt-4">

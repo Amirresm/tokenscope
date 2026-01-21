@@ -1,7 +1,11 @@
 import {
+    ChartBarIcon,
+    ChartPolarIcon,
+    ChartScatterIcon,
     CheckCircleIcon,
     CrosshairIcon,
     CrosshairSimpleIcon,
+    GraphIcon,
     PaintBrushIcon,
     TargetIcon,
     XCircleIcon,
@@ -44,17 +48,22 @@ const metricOptions = [
     {
         label: TokenMetrics.lastPerplexity.label,
         value: "lastPerplexity",
-        icon: <CrosshairIcon size={16} />,
+        icon: <ChartPolarIcon size={16} />,
     },
     {
         label: TokenMetrics.marginConfidence.label,
         value: "marginConfidence",
-        icon: <CrosshairIcon size={16} />,
+        icon: <ChartBarIcon size={16} />,
     },
     {
         label: TokenMetrics.entropy.label,
         value: "entropy",
-        icon: <CrosshairIcon size={16} />,
+        icon: <ChartScatterIcon size={16} />,
+    },
+    {
+        label: TokenMetrics.attentionSaliency.label,
+        value: "attentionSaliency",
+        icon: <GraphIcon size={16} />,
     },
 ] as const;
 
@@ -85,8 +94,8 @@ export function TokenLevelConfigDropdown() {
         <div
             className="dropdown bg-base-200 rounded-box z-1 py-4 px-2 shadow-sm w-96 overflow-x-hidden"
             popover="auto"
-            id="popover-1"
-            style={{ positionAnchor: "--anchor-1" }}
+            id="token-level-config-popover"
+            style={{ positionAnchor: "--token-level-config-anchor" }}
         >
             <div className="flex flex-col gap-2 text-sm">
                 <h3 className="px-4 mb-4 font-semibold text-lg">
@@ -107,7 +116,7 @@ export function TokenLevelConfigDropdown() {
                     />
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    Token Metric
+                    <div className="min-w-52">Color by Metric</div>
                     <MultiSwitch
                         options={metricOptions}
                         selectedValue={

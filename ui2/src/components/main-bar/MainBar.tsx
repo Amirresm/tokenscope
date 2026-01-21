@@ -1,4 +1,4 @@
-import { PlusIcon, RobotIcon } from "@phosphor-icons/react";
+import { PlusIcon, RobotIcon, SunIcon } from "@phosphor-icons/react";
 import React from "react";
 import sessionStore from "../../store/sessionStore";
 import { useCurrentModelQuery } from "../../hooks/current-model-query";
@@ -18,8 +18,21 @@ export function MainBar() {
         drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);
     }, []);
 
+    const handleToggleTheme = React.useCallback(() => {
+        // read the current theme from html element
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute("data-theme");
+        if (currentTheme === "dark") {
+            html.setAttribute("data-theme", "light");
+            localStorage.setItem("theme", "light");
+        } else {
+            html.setAttribute("data-theme", "dark");
+            localStorage.setItem("theme", "dark");
+        }
+    }, []);
+
     return (
-        <div className="flex flex-col items-center gap-2 my-4">
+        <div className="flex flex-col items-center gap-2 my-4 px-1">
             <div className="tooltip tooltip-right" data-tip="Start New Session">
                 <button
                     className={`btn btn-ghost btn-sm btn-primary`}
@@ -44,6 +57,12 @@ export function MainBar() {
                     <RobotIcon />
                 </button>
             </div>
+            <button
+                className={`btn btn-ghost btn-sm`}
+                onClick={handleToggleTheme}
+            >
+                <SunIcon />
+            </button>
             <div className="divider divider-horizontal mx-0 grow self-center"></div>
         </div>
     );

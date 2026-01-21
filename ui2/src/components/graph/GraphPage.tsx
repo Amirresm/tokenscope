@@ -224,13 +224,16 @@ function GraphPage() {
         [sessionId, isGenerating],
     );
 
+    const darkMode =
+        document.documentElement.getAttribute("data-theme") === "dark";
+
     return (
-        <div className="h-full w-full p-4">
+        <div className="h-full w-full rounded-lg overflow-hidden">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
-                colorMode="system"
+                colorMode={darkMode ? "dark" : "light"}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}

@@ -19,6 +19,38 @@ type TokenGenerationData =
           content: { session_id: string; branch_id: string };
       };
 
+function logBuckets(
+    min: number,
+    max: number,
+    numBuckets: number,
+    linScale = 1,
+): number[] {
+    if (numBuckets <= 0) {
+        throw new Error("numBuckets must be > 0");
+    }
+    if (min >= max) {
+        throw new Error("min must be < max");
+    }
+
+    const symlog = (x: number): number =>
+        Math.sign(x) * Math.log1p(Math.abs(x) / linScale);
+
+    const symexp = (y: number): number =>
+        Math.sign(y) * linScale * Math.expm1(Math.abs(y));
+
+    const sMin = symlog(min);
+    const sMax = symlog(max);
+
+    const step = (sMax - sMin) / numBuckets;
+
+    const buckets: number[] = [];
+    for (let i = 0; i < numBuckets; i++) {
+        buckets.push(symexp(sMin + i * step));
+    }
+
+    return buckets;
+}
+
 const handleTokenGenerationStream = async (
     response: Response,
     handleData: (data: GenerationToken) => void,
@@ -82,7 +114,103 @@ const handleTokenGenerationStream = async (
             generationStore.attentionTargetToken.value,
         );
     }
+    console.log("Calculating Context-Aware NLLs...");
 
+    // const contextSize = 10;
+    // const contextAwareNLLs = [];
+    // for (const token of generationStore.currentGeneration.value) {
+    //     console.log("Token:", token.position, token.lastPerplexity);
+    //     if (token.lastPerplexity === undefined) {
+    //         throw new Error("Token missing lastPerplexity");
+    //     }
+    //     let startPos = Math.max(0, token.position - contextSize);
+    //     let endPos = token.position;
+    //     if (endPos <= 0) {
+    //         contextAwareNLLs.push(token.lastPerplexity);
+    //         continue;
+    //     }
+    //     let contextProbs = generationStore.currentGeneration.value
+    //         .slice(startPos, endPos)
+    //         .map((t) => Math.exp(-t.lastPerplexity!));
+    //     let avg =
+    //         contextProbs.reduce((a, b) => a + b, 0) / contextProbs.length;
+    //     avg = -Math.log(avg);
+    //     contextAwareNLLs.push(token.lastPerplexity - avg);
+    // }
+    // // generationStore.currentGeneration.value[0].lastPerplexity = 0;
+    // for (let i = 0; i < generationStore.currentGeneration.value.length; i++) {
+    //     generationStore.currentGeneration.value[i].lastPerplexity =
+    //         contextAwareNLLs[i];
+    // }
+
+    console.log("Calculating Attention Saliency...");
+    // attention saliency
+    const attentionHeads =
+        generationStore.currentGeneration.value.length > 0
+            ? Object.keys(
+                  generationStore.currentGeneration.value[
+                      generationStore.currentGeneration.value.length - 1
+                  ].attentionSnapshot || {},
+              )
+            : [];
+    if (attentionHeads.length > 0) {
+        for (const head of attentionHeads) {
+            for (const token of generationStore.currentGeneration.value) {
+                token.attentionSaliences[head] = 0;
+                if (token.reverseAttentionSnapshot === undefined) {
+                    token.reverseAttentionSnapshot = {};
+                }
+                token.reverseAttentionSnapshot[head] = [];
+                let numContributions = 0;
+                for (const otherToken of generationStore.currentGeneration
+                    .value) {
+                    if (token.position >= otherToken.position) {
+                        continue;
+                    }
+                    if (otherToken.attentionSnapshot) {
+                        for (const attnInfo of otherToken.attentionSnapshot[
+                            head
+                        ]) {
+                            numContributions += 1;
+                            if (attnInfo.index === token.position) {
+                                token.attentionSaliences[head] +=
+                                    attnInfo.attention;
+                                token.reverseAttentionSnapshot[head].push({
+                                    index: otherToken.position,
+                                    attention: attnInfo.attention,
+                                });
+                            }
+                        }
+                    }
+                }
+                token.attentionSaliences[head] /=
+                    numContributions > 0 ? numContributions : 1;
+                token.reverseAttentionSnapshot[head].sort(
+                    (a, b) => b.attention - a.attention,
+                );
+            }
+
+            const attentionSaliencyValues = clampOutliers(
+                generationStore.currentGeneration.value
+                    .filter((t) => t.attentionSaliences[head] !== undefined)
+                    .map((t) =>
+                        t.attentionSaliences[head] !== undefined
+                            ? t.attentionSaliences[head]
+                            : 0,
+                    ),
+                0,
+            );
+            const numBuckets = 5;
+            const attentionSaliencyPercentiles = calcAllPercentiles(
+                attentionSaliencyValues,
+                numBuckets,
+            );
+            generationStore.attentionSaliencyTenPercentiles.value[head] =
+                attentionSaliencyPercentiles;
+        }
+    }
+
+    console.log("Calculating Percentiles...");
     // get min max for metrics
     const confidenceDomain = [Infinity, -Infinity];
     const perplexityDomain = [Infinity, -Infinity];
@@ -177,6 +305,12 @@ const handleTokenGenerationStream = async (
     generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
     generationStore.lastPerplexityTenPercentiles.value =
         lastPerplexityPercentiles;
+    generationStore.lastPerplexityTenPercentiles.value = logBuckets(
+        Math.min(...lastPerpValues),
+        Math.max(...lastPerpValues),
+        5,
+    );
+    console.log(generationStore.lastPerplexityTenPercentiles.value);
     generationStore.marginConfidenceTenPercentiles.value =
         marginConfidencePercentiles;
     generationStore.entropyTenPercentiles.value = entropyPercentiles;

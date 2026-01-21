@@ -3,6 +3,8 @@ import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
+import am5themes_Material from "@amcharts/amcharts5/themes/Material";
+import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
 import generationStore from "../../store/generationStore";
 import { GenerationToken } from "../../models/generationToken";
 
@@ -27,11 +29,18 @@ function Chart({
     useLayoutEffect(() => {
         const root = am5.Root.new("relativeAttentionChart");
 
-        root.setThemes([
-            am5themes_Animated.new(root),
-            am5themes_Dark.new(root),
-        ]);
+        const darkMode =
+            document.documentElement.getAttribute("data-theme") === "dark";
 
+        const themes: any[] = [
+            am5themes_Animated.new(root),
+            am5themes_Material.new(root),
+        ];
+
+        if (darkMode) {
+            themes.push(am5themes_Dark.new(root));
+        }
+        root.setThemes(themes);
         const chart = root.container.children.push(
             am5xy.XYChart.new(root, {
                 panX: true,
@@ -39,10 +48,21 @@ function Chart({
                 wheelX: "panX",
                 wheelY: "zoomX",
                 pinchZoomX: true,
-                paddingLeft: 0,
                 layout: root.verticalLayout,
+                background: am5.Rectangle.new(root, {
+                    fill: darkMode ? am5.color(0x090909) : am5.color(0xffffff),
+                    fillOpacity: 1,
+                }),
             }),
         );
+
+        am5plugins_exporting.Exporting.new(root, {
+            menu: am5plugins_exporting.ExportingMenu.new(root, {}),
+            pngOptions: {
+                maintainPixelRatio: true,
+            },
+        });
+
         const colors = chart.get("colors");
         if (colors) colors.set("step", 3);
 
@@ -50,15 +70,10 @@ function Chart({
 
         const renderer = am5xy.AxisRendererX.new(root, {});
         renderer.labels.template.setAll({
-            rotation: 0,
-            centerY: am5.p50,
-            centerX: am5.p100,
-            paddingRight: 15,
-            oversizedBehavior: "fit",
+            paddingTop: 15,
         });
         let xAxis = chart.xAxes.push(
             am5xy.CategoryAxis.new(root, {
-                maxDeviation: 0.1,
                 renderer: renderer,
                 categoryField: "headName",
             }),
@@ -161,8 +176,6 @@ function Chart({
                     relativeAttention: 0,
                 };
             });
-
-            console.log(data);
 
             chart.series.each((series) => {
                 series.data.setAll(data);

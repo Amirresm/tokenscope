@@ -64,7 +64,7 @@ export function AstPage() {
             <div>
                 {source ? (
                     <>
-                        <div className="m-4 p-4 rounded-lg bg-base-200">
+                        <div className="m-4 p-4 rounded-lg bg-base-300 border border-base-200">
                             Select a range by highlighting text below to analyze
                             AST structure.
                         </div>
@@ -76,8 +76,8 @@ export function AstPage() {
                         />
                     </>
                 ) : (
-                    <div className="m-4 p-4 rounded-lg bg-base-200">
-                        Generate some text to view its AST structure.
+                    <div className="m-4 p-4 rounded-lg bg-base-300 border border-base-200">
+                        Generate to view AST structure.
                     </div>
                 )}
             </div>
@@ -98,7 +98,7 @@ export function AstPage() {
         );
 
     return (
-        <div className="m-4 min-h-0 flex flex-col">
+        <div className="h-full min-h-0 flex flex-col">
             <GenericAstView
                 astTokens={astDataQuery.data.astTokens}
                 groupingMode={astViewMode}

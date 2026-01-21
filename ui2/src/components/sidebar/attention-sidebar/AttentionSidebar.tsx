@@ -161,8 +161,10 @@ function Header({ token }: { token: GenerationToken }) {
 function Content({ token }: { token: GenerationToken }) {
     const currentGeneration = generationStore.currentGeneration.value;
     const attentionTargetHead = generationStore.attentionTargetHead.value;
+    const attentionTargetToken = generationStore.attentionTargetToken.value;
 
     const [
+        attentionSaliency,
         numInputs,
         numOutputs,
         avgInputAttn,
@@ -180,6 +182,13 @@ function Content({ token }: { token: GenerationToken }) {
         let totalConf = 0;
         let totalPPL = 0;
         let totalLPPL = 0;
+
+        const attentionSaliency =
+            attentionTargetHead &&
+            currentGeneration.length > 0 &&
+            token.attentionSaliences[attentionTargetHead]
+                ? token.attentionSaliences[attentionTargetHead]
+                : 0;
 
         if (token.attentionSnapshot && attentionTargetHead) {
             const attns = token.attentionSnapshot[attentionTargetHead];
@@ -207,6 +216,7 @@ function Content({ token }: { token: GenerationToken }) {
         const avgPPL = numOutputs > 0 ? totalPPL / numOutputs : 0;
         const avgLPPL = numOutputs > 0 ? totalLPPL / numOutputs : 0;
         return [
+            attentionSaliency,
             numInputs,
             numOutputs,
             avgInputAttn,
@@ -222,19 +232,40 @@ function Content({ token }: { token: GenerationToken }) {
             <Navigation token={token} />
             <Header token={token} />
             <button
-                className="btn btn-ghost mt-4"
+                className="btn btn-ghost btn-secondary btn-sm mt-4"
+                onClick={() => {
+                    const modal = document.getElementById(
+                        "reverse_attention_modal",
+                    ) as HTMLDialogElement;
+                    modal.showModal();
+                }}
+                disabled={!attentionTargetHead}
+            >
+                Top Attended Tokens
+            </button>
+            <button
+                className="btn btn-ghost btn-secondary btn-sm mt-4"
                 onClick={() => {
                     const modal = document.getElementById(
                         "relative_attention_modal",
                     ) as HTMLDialogElement;
                     modal.showModal();
                 }}
+                disabled={
+                    !attentionTargetHead ||
+                    !attentionTargetToken ||
+                    attentionTargetToken.position === token.position
+                }
             >
-                Show Relative Attention Chart
+                Relative Attention to Token {attentionTargetToken?.position}
             </button>
             <div className="divider my-2" />
-            <table className="table-auto w-full text-sm">
+            <table className="table w-full text-sm">
                 <tbody>
+                    <tr>
+                        <td>Attention Saliency</td>
+                        <td>{attentionSaliency.toFixed(3)}</td>
+                    </tr>
                     <tr>
                         <td>Total Attention</td>
                         <td>

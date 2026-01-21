@@ -12,6 +12,7 @@ export const TokenMetrics = {
     lastPerplexity: { label: "Last Perplexity" },
     marginConfidence: { label: "Margin Confidence" },
     entropy: { label: "Entropy" },
+    attentionSaliency: { label: "Attention Saliency (Select an Attn. Head)" },
 } as const;
 
 type TokenLevelViewConfigType = {

@@ -9,6 +9,7 @@ import drawerStore, {
     DrawerTabsEnum,
 } from "../../store/components/drawerStore";
 import { useCurrentModelQuery } from "../../hooks/current-model-query";
+import { ASTConfigDropdown } from "../ASTConfigDropdown";
 
 function AstPageActions() {
     const astViewMode = astStore.astViewMode.value;
@@ -137,21 +138,41 @@ export function MainHeader() {
             </div>
 
             <div className="flex gap-2 items-center mx-4">
-                <div className="dropdown">
-                    <button
-                        className="btn btn-sm"
-                        popoverTarget="popover-1"
-                        style={{
-                            anchorName: "--anchor-1",
-                        }}
-                    >
-                        <GearIcon />
-                    </button>
-                    <TokenLevelConfigDropdown />
-                </div>
+                {viewMode === "generation" ? (
+                    <div className="dropdown">
+                        <button
+                            className="btn btn-sm"
+                            popoverTarget="token-level-config-popover"
+                            style={{
+                                anchorName: "--token-level-config-anchor",
+                            }}
+                        >
+                            <GearIcon />
+                        </button>
+                        <TokenLevelConfigDropdown />
+                    </div>
+                ) : (
+                    <div className="dropdown">
+                        <button
+                            className="btn btn-sm"
+                            popoverTarget="ast-config-dropdown"
+                            style={{
+                                anchorName: "--ast-config-dropdown-anchor",
+                            }}
+                        >
+                            <GearIcon />
+                        </button>
+                        <ASTConfigDropdown />
+                    </div>
+                )}
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-sm m-1">
-                        View Mode: {viewMode}
+                        View Mode:{" "}
+                        {viewMode === "generation"
+                            ? "Generation"
+                            : viewMode === "graph"
+                              ? "Graph"
+                              : "Code Analysis"}
                     </div>
                     <ul
                         tabIndex={0}

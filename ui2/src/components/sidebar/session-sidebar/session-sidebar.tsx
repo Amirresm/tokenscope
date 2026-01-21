@@ -60,6 +60,13 @@ const SessionSidebar = () => {
                 const lastBranch = branches[branches.length - 1];
                 sessionStore.setBranchId(lastBranch);
                 await handlePrefillGeneration(sessionId, lastBranch);
+            } else {
+                console.warn(
+                    "No branches found for session:",
+                    sessionId,
+                    branches,
+                );
+                sessionStore.setBranchId(null);
             }
         },
         [branchQuery.data],
@@ -75,7 +82,7 @@ const SessionSidebar = () => {
 
     return (
         <div className="w-full h-full flex flex-col">
-            <div className="p-2 border-b">
+            <div className="p-2">
                 <label className="block mb-1 font-medium">Session</label>
                 <select
                     className="w-full p-2 select"
@@ -92,23 +99,37 @@ const SessionSidebar = () => {
                     ))}
                 </select>
             </div>
-            {sessionId && (
-                <div className="p-2 border-b">
-                    <label className="block mb-1 font-medium">Branch</label>
-                    <select
-                        className="w-full p-2 select"
-                        value={selectedBranch || ""}
-                        onChange={(e) => handleBranchChange(e.target.value)}
-                    >
-                        <option value="" disabled>
-                            Select a branch
-                        </option>
-                        {branchQuery.data?.map((branch) => (
-                            <option key={branch} value={branch}>
-                                {branch}
+            {sessionId ? (
+                (branchQuery.data?.length ?? 0) > 0 ? (
+                    <div className="p-2">
+                        <label className="block mb-1 font-medium">Branch</label>
+                        <select
+                            className="w-full p-2 select"
+                            value={selectedBranch || ""}
+                            onChange={(e) => handleBranchChange(e.target.value)}
+                        >
+                            <option value="" disabled>
+                                Select a branch
                             </option>
-                        ))}
-                    </select>
+                            {branchQuery.data?.map((branch) => (
+                                <option key={branch} value={branch}>
+                                    {branch}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                ) : (
+                    <div className="p-2">
+                        <p className="text-sm italic text-gray-500">
+                            No branches available for this session.
+                        </p>
+                    </div>
+                )
+            ) : (
+                <div className="p-2">
+                    <p className="text-sm italic text-gray-500">
+                        Select a session to view branches.
+                    </p>
                 </div>
             )}
         </div>

@@ -8,10 +8,10 @@ type MultiSwitchProps<T> = {
 
 export function MultiSwitch<T>(props: MultiSwitchProps<T>) {
     return (
-        <div className="flex gap-0">
+        <div className="flex gap-0 max-w-full flex-wrap">
             {props.options.map((option) => (
                 <div
-                    className="tooltip"
+                    className="tooltip tooltip-left"
                     data-tip={option.label}
                     key={option.label}
                 >

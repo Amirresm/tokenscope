@@ -112,6 +112,8 @@ const lastPerplexityTenPercentiles = signal<number[]>([]);
 const marginConfidenceTenPercentiles = signal<number[]>([]);
 const entropyTenPercentiles = signal<number[]>([]);
 
+const attentionSaliencyTenPercentiles = signal<Record<string, number[]>>({});
+
 const fimStartToken = signal<number | null>(null);
 const fimEndToken = signal<number | null>(null);
 
@@ -243,6 +245,7 @@ export default {
     lastPerplexityTenPercentiles,
     marginConfidenceTenPercentiles,
     entropyTenPercentiles,
+    attentionSaliencyTenPercentiles,
 
     attentionTargetToken,
     attentionTargetHead,

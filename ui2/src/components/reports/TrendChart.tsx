@@ -3,6 +3,8 @@ import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
+import am5themes_Material from "@amcharts/amcharts5/themes/Material";
+import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
 import generationStore from "../../store/generationStore";
 import { getOutliers } from "../../utils/outlier";
 
@@ -11,10 +13,10 @@ function visualizeWhitespace(str: string) {
         .replace(/ /g, "␣") // space
         .replace(/\t/g, "⇥") // tab
         .replace(/\n/g, "⏎") // newline
-        .replace("{", "\{")
-        .replace("}", "\}")
-        .replace("[", "\[")
-        .replace("]", "\]");
+        .replace("{", "{{")
+        .replace("}", "}}")
+        .replace("[", "[[")
+        .replace("]", "]]");
 }
 
 type DataPoint = {
@@ -45,11 +47,18 @@ function Chart() {
 
     useLayoutEffect(() => {
         const root = am5.Root.new("chartdiv");
+        const darkMode =
+            document.documentElement.getAttribute("data-theme") === "dark";
 
-        root.setThemes([
+        const themes: any[] = [
             am5themes_Animated.new(root),
-            am5themes_Dark.new(root),
-        ]);
+            am5themes_Material.new(root),
+        ];
+
+        if (darkMode) {
+            themes.push(am5themes_Dark.new(root));
+        }
+        root.setThemes(themes);
 
         const chart = root.container.children.push(
             am5xy.XYChart.new(root, {
@@ -61,20 +70,33 @@ function Chart() {
                 paddingLeft: 0,
                 paddingRight: 0,
                 layout: root.verticalLayout,
+                background: am5.Rectangle.new(root, {
+                    fill: darkMode ? am5.color(0x090909) : am5.color(0xffffff),
+                    fillOpacity: 1,
+                }),
             }),
         );
         const colors = chart.get("colors");
         if (colors) colors.set("step", 3);
 
+        const exporting = am5plugins_exporting.Exporting.new(root, {
+            menu: am5plugins_exporting.ExportingMenu.new(root, {}),
+            pngOptions: {
+                maintainPixelRatio: true,
+            },
+        });
+
         const data: DataPoint[] = [];
 
-        const renderer = am5xy.AxisRendererX.new(root, {});
+        const renderer = am5xy.AxisRendererX.new(root, {
+            minGridDistance: 10,
+        });
 
         renderer.labels.template.setAll({
             rotation: -90,
             centerY: am5.p50,
             centerX: am5.p100,
-            paddingRight: 16,
+            fontSize: 10,
         });
         let xAxis = chart.xAxes.push(
             am5xy.CategoryAxis.new(root, {
@@ -199,7 +221,9 @@ function Chart() {
         }
 
         // Add legend
-        let legend = chart.children.push(am5.Legend.new(root, {}));
+        let legend = chart.children.push(
+            am5.Legend.new(root, { marginBottom: 16 }),
+        );
         legend.data.setAll(chart.series.values);
 
         // Add cursor
@@ -212,51 +236,18 @@ function Chart() {
         );
         cursor.lineY.set("visible", false);
 
-        chart.set(
-            "scrollbarX",
-            am5.Scrollbar.new(root, {
-                orientation: "horizontal",
-            }),
-        );
+        const scrollbar = am5.Scrollbar.new(root, {
+            orientation: "horizontal",
+        });
 
-        // const scrollbar = chart.set(
-        //     "scrollbarX",
-        //     am5xy.XYChartScrollbar.new(root, {
-        //         orientation: "horizontal",
-        //         height: 50,
-        //     }),
-        // );
-        // let sbXAxis = scrollbar.chart.xAxes.push(
-        //     am5xy.CategoryAxis.new(root, {
-        //         renderer: am5xy.AxisRendererX.new(root, {}),
-        //         categoryField: "position",
-        //     }),
-        // );
-        // sbXAxis
-        //     .get("renderer")
-        //     .labels.template.adapters.add("text", function (text, target) {
-        //         if (target.dataItem && target.dataItem.dataContext) {
-        //             return (target.dataItem.dataContext as DataPoint)
-        //                 .tokenString;
-        //         }
-        //         return text;
-        //     });
-        //
-        // let sbValueAxis = scrollbar.chart.yAxes.push(
-        //     am5xy.ValueAxis.new(root, {
-        //         renderer: am5xy.AxisRendererY.new(root, {}),
-        //     }),
-        // );
-        //
-        // var sbseries = scrollbar.chart.series.push(
-        //     am5xy.LineSeries.new(root, {
-        //         xAxis: sbXAxis,
-        //         yAxis: sbValueAxis,
-        //         categoryXField: "position",
-        //         valueYField: "confidence",
-        //     }),
-        // );
-        // sbseries.data.setAll(data);
+        chart.set("scrollbarX", scrollbar);
+        exporting.events.on("exportstarted", function () {
+            scrollbar.hide(0);
+        });
+
+        exporting.events.on("exportfinished", function () {
+            scrollbar.show(0);
+        });
 
         chartRef.current = chart;
 
@@ -282,30 +273,22 @@ function Chart() {
                 color: "#10b981",
             }));
 
-            const [lpplMin, lpplMax] = getOutliers(
-                data.map((d) => d.lastPerplexity),
-            );
-            const [pplMin, pplMax] = getOutliers(data.map((d) => d.perplexity));
-
-            for (const d of data) {
-                if (d.lastPerplexity < lpplMin) d.lastPerplexity = lpplMin;
-                if (d.lastPerplexity > lpplMax) d.lastPerplexity = lpplMax;
-                if (d.perplexity < pplMin) d.perplexity = pplMin;
-                if (d.perplexity > pplMax) d.perplexity = pplMax;
-            }
+            // const [lpplMin, lpplMax] = getOutliers(
+            //     data.map((d) => d.lastPerplexity),
+            // );
+            // const [pplMin, pplMax] = getOutliers(data.map((d) => d.perplexity));
+            //
+            // for (const d of data) {
+            //     if (d.lastPerplexity < lpplMin) d.lastPerplexity = lpplMin;
+            //     if (d.lastPerplexity > lpplMax) d.lastPerplexity = lpplMax;
+            //     if (d.perplexity < pplMin) d.perplexity = pplMin;
+            //     if (d.perplexity > pplMax) d.perplexity = pplMax;
+            // }
 
             chart.series.each((series) => {
                 series.data.setAll(data);
             });
 
-            // const scrollbar = chart.get("scrollbarX") as am5xy.XYChartScrollbar;
-            // if (scrollbar) {
-            //     console.log("Updating scrollbar data");
-            //     scrollbar.chart.series.each((series) => {
-            //         series.data.setAll(data);
-            //     });
-            // }
-            //
             const lastPromptOrManualTokenIndex = data
                 .map((d) => d.isPromptOrManual)
                 .lastIndexOf(true);
@@ -356,7 +339,7 @@ function Chart() {
                 }
                 if (selectedToken) {
                     const rangeDataItem = xAxis.makeDataItem({
-                        category: selectedToken.position,
+                        category: selectedToken.position + 1,
                     });
 
                     const color = am5.color(0x1e90ff);

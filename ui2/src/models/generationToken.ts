@@ -46,12 +46,15 @@ export type GenerationToken = {
     marginConfidence?: number;
     entropy?: number;
 
+    attentionSaliences: Record<string, number>;
+
     position: number;
     tokenTimeMs: number;
     tokenTypes: string[];
     alternativeTokens?: GenerationToken[];
     branchId?: string;
     attentionSnapshot?: AttentionSnapshot;
+    reverseAttentionSnapshot?: AttentionSnapshot;
 
     stop?: boolean;
     prompt?: boolean;
@@ -98,6 +101,7 @@ export function generationTokenFromData(
         marginConfidence: data.margin_confidence
             ? parseFloat(data.margin_confidence)
             : undefined,
+        attentionSaliences: {},
         entropy: data.entropy ? parseFloat(data.entropy) : undefined,
         position: data.position,
         tokenTimeMs: parseFloat(data.token_time_ms),

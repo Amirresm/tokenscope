@@ -3,6 +3,8 @@ import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
+import am5themes_Material from "@amcharts/amcharts5/themes/Material";
+import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
 import astStore, { ViewModesEnum } from "../../store/components/astStore";
 import generationStore from "../../store/generationStore";
 
@@ -23,10 +25,18 @@ function Chart() {
     useLayoutEffect(() => {
         const root = am5.Root.new("astChartdiv");
 
-        root.setThemes([
+        const darkMode =
+            document.documentElement.getAttribute("data-theme") === "dark";
+
+        const themes: any[] = [
             am5themes_Animated.new(root),
-            am5themes_Dark.new(root),
-        ]);
+            am5themes_Material.new(root),
+        ];
+
+        if (darkMode) {
+            themes.push(am5themes_Dark.new(root));
+        }
+        root.setThemes(themes);
 
         const chart = root.container.children.push(
             am5xy.XYChart.new(root, {
@@ -37,8 +47,20 @@ function Chart() {
                 pinchZoomX: true,
                 paddingLeft: 0,
                 layout: root.verticalLayout,
+                background: am5.Rectangle.new(root, {
+                    fill: darkMode ? am5.color(0x090909) : am5.color(0xffffff),
+                    fillOpacity: 1,
+                }),
             }),
         );
+
+        am5plugins_exporting.Exporting.new(root, {
+            menu: am5plugins_exporting.ExportingMenu.new(root, {}),
+            pngOptions: {
+                maintainPixelRatio: true,
+            },
+        });
+
         const colors = chart.get("colors");
         if (colors) colors.set("step", 3);
 
