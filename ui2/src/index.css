@@ -237,6 +237,6 @@
     }
 }
 
-.tooltip::before {
-    z-index: 1000;
-}
+/* .tooltip::before { */
+/*     z-index: 10; */
+/* } */

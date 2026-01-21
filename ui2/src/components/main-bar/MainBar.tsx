@@ -32,7 +32,7 @@ export function MainBar() {
     }, []);
 
     return (
-        <div className="flex flex-col items-center gap-2 my-4 px-1">
+        <div className="h-screen sticky top-0 z-20 flex flex-col items-center gap-2 py-4 px-1">
             <div className="tooltip tooltip-right" data-tip="Start New Session">
                 <button
                     className={`btn btn-ghost btn-sm btn-primary`}

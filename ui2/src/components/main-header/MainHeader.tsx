@@ -85,7 +85,7 @@ export function MainHeader() {
     }, [currentGeneration]);
 
     return (
-        <header className="">
+        <header className="sticky top-0 bg-base-100 z-10">
             <div className="bg-base-200 border border-base-300 rounded-xl flex items-center gap-2 m-4 mb-2 px-0 py-0 text-sm">
                 <button
                     className="btn btn-ghost btn-sm"

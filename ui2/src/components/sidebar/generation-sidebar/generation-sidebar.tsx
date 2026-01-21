@@ -10,11 +10,11 @@ import { continueGeneration } from "../../../api/generationAPI";
 // type GenerationMode = "continue" | "fim";
 
 const colorMap = {
-    0: "text-red-300",
-    0.25: "text-orange-300",
-    0.5: "text-yellow-300",
-    0.75: "text-green-300",
-    0.98: "text-blue-300",
+    0.0: "text-[var(--grade-1)]",
+    0.25: "text-[var(--grade-2)]",
+    0.5: "text-[var(--grade-3)]",
+    0.75: "text-[var(--grade-4)]",
+    0.98: "text-[var(--grade-5)]",
 };
 
 const getColor = (confidence: number) =>
@@ -137,7 +137,7 @@ export function Content({ token }: { token: GenerationToken }) {
     // }, [handleNextToken, handlePrevToken]);
 
     return (
-        <div className="p-4 flex flex-col grow">
+        <div className="h-full overflow-y-auto p-4 flex flex-col grow">
             <Navigation token={token} />
             <div className="flex items-center gap-3 mt-4">
                 <div
@@ -158,7 +158,7 @@ export function Content({ token }: { token: GenerationToken }) {
             {/*     {token.tokenTimeMs} ms */}
             {/* </div> */}
             <div className="divider" />
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2 flex-wrap">
                 {token.tokenTypes.length > 0 ? (
                     token.tokenTypes.map((type) => (
                         <div
@@ -175,7 +175,7 @@ export function Content({ token }: { token: GenerationToken }) {
                 )}
             </div>
             <div className="divider" />
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-h-44">
                 <table className="table">
                     <thead>
                         <tr className="text-xs">
@@ -186,7 +186,9 @@ export function Content({ token }: { token: GenerationToken }) {
                     <tbody>
                         <tr className="text-xs">
                             <td>Generation Time</td>
-                            <td className="text-center">{token.tokenTimeMs} ms</td>
+                            <td className="text-center">
+                                {token.tokenTimeMs} ms
+                            </td>
                         </tr>
                         <tr className="text-xs">
                             <td>PPL</td>

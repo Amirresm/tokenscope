@@ -70,11 +70,11 @@ export default function AlternativeTokens({
             </div>
             <div className="mt-4">
                 <BarChart
-                    height={300}
+                    height={200}
                     width="100%"
                     accessibilityLayer
                     data={chartData}
-                    margin={{ top: 8, right: 0, bottom: 24, left: -16 }}
+                    margin={{ top: 8, right: 0, bottom: 40, left: -16 }}
                 >
                     {/* <CartesianGrid vertical={false} /> */}
                     <XAxis

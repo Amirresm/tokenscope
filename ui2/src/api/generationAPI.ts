@@ -310,7 +310,6 @@ const handleTokenGenerationStream = async (
         Math.max(...lastPerpValues),
         5,
     );
-    console.log(generationStore.lastPerplexityTenPercentiles.value);
     generationStore.marginConfidenceTenPercentiles.value =
         marginConfidencePercentiles;
     generationStore.entropyTenPercentiles.value = entropyPercentiles;

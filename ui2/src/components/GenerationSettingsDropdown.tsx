@@ -24,7 +24,7 @@ export function GenerationSettingsDropdown() {
                     Token Level View Config
                 </h3>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Alternative Tokens</span>
+                    <span className="text-base-content">Alternative Tokens</span>
                     <label className="input w-24">
                         <input
                             type="number"
@@ -41,7 +41,7 @@ export function GenerationSettingsDropdown() {
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Top K</span>
+                    <span className="text-base-content">Top K</span>
                     <label className="input w-24">
                         <input
                             type="number"
@@ -58,7 +58,7 @@ export function GenerationSettingsDropdown() {
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Top P</span>
+                    <span className="text-base-content">Top P</span>
                     <label className="input w-24">
                         <input
                             type="number"
@@ -71,7 +71,7 @@ export function GenerationSettingsDropdown() {
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Temperature</span>
+                    <span className="text-base-content">Temperature</span>
                     <label className="input w-24">
                         <input
                             type="number"
@@ -84,7 +84,7 @@ export function GenerationSettingsDropdown() {
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300 flex items-center gap-1">
+                    <span className="text-base-content flex items-center gap-1">
                         Attention Layer
                         <div
                             className="tooltip tooltip-top before:w-64"
@@ -109,7 +109,7 @@ export function GenerationSettingsDropdown() {
                     </label>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                    <span className="text-neutral-300">Attention Top N</span>
+                    <span className="text-base-content">Attention Top N</span>
                     <label className="input w-24">
                         <input
                             type="number"
