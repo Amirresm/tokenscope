@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import { fetchASTData } from "../../../api/astAPI";
 import sessionStore from "../../../store/sessionStore";
-import astStore, { ViewModesEnum } from "../../../store/components/astStore";
+import astStore, {
+    ASTViewModeLabels,
+    ViewModesEnum,
+} from "../../../store/components/astStore";
 
 export default function AstSidebar() {
     const sessionId = sessionStore.sessionId.value;
@@ -41,7 +44,7 @@ export default function AstSidebar() {
                         groupKey = `Line ${tokenInfo.lineNumber}`;
                         break;
                     case ViewModesEnum.AtomicBlock2:
-                        groupKey = `${tokenInfo.atomicBlock?.type} - ${tokenInfo.atomicBlock?.depth}`;
+                        groupKey = `${tokenInfo.atomicBlock?.depth} > ${tokenInfo.atomicBlock?.type}`;
                         break;
                 }
                 const metricValue = parseFloat(tokenInfo.token[metric]);
@@ -69,7 +72,7 @@ export default function AstSidebar() {
                         modal.showModal();
                     }}
                 >
-                    Show Stats Chart
+                    View Stats
                 </button>
                 <button
                     className="btn btn-ghost btn-secondary mb-4"
@@ -80,24 +83,34 @@ export default function AstSidebar() {
                         modal.showModal();
                     }}
                 >
-                    Show Attention Heatmap
+                    View Attention Heatmap
                 </button>
-                <h2 className="font-semibold">AST {astViewMode} Stats</h2>
-                <div>
-                    <ul className="list-disc list-inside">
+                <h2 className="">
+                    Average {metric} by {ASTViewModeLabels[astViewMode]}
+                </h2>
+                <table className="table table-sm">
+                    <thead>
+                        <tr className="text-xs">
+                            <th>Entity</th>
+                            <th>Average</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         {Object.entries(stats).map(([type, values]) => {
                             const avg =
                                 values.reduce((sum, v) => sum + v, 0) /
                                 values.length;
                             return (
-                                <li key={type}>
-                                    {type}: {avg.toFixed(4)} (n=
-                                    {values.length})
-                                </li>
+                                <tr key={type} className="text-sm">
+                                    <td className="text-xs">{type}</td>
+                                    <td>{avg.toFixed(4)}</td>
+                                    <td>{values.length}</td>
+                                </tr>
                             );
                         })}
-                    </ul>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
     );

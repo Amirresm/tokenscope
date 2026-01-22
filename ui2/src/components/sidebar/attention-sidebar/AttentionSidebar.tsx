@@ -1,7 +1,12 @@
 import React from "react";
 import generationStore from "../../../store/generationStore";
 import { GenerationToken } from "../../../models/generationToken";
-import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    QuestionIcon,
+} from "@phosphor-icons/react";
+import { METRICLABELS } from "../../../constants/labels";
 
 function Navigation({ token }: { token: GenerationToken }) {
     const currentGeneration = generationStore.currentGeneration.value;
@@ -241,7 +246,7 @@ function Content({ token }: { token: GenerationToken }) {
                 }}
                 disabled={!attentionTargetHead}
             >
-                Top Attended Tokens
+                Top Attending Tokens
             </button>
             <button
                 className="btn btn-ghost btn-secondary btn-sm mt-4"
@@ -257,17 +262,26 @@ function Content({ token }: { token: GenerationToken }) {
                     attentionTargetToken.position === token.position
                 }
             >
-                Relative Attention to Token {attentionTargetToken?.position}
+                Attention to Token {attentionTargetToken?.position}:{" "}
+                {attentionTargetToken?.token}
             </button>
             <div className="divider my-2" />
             <table className="table w-full text-sm">
                 <tbody>
                     <tr>
-                        <td>Attention Saliency</td>
+                        <td>{METRICLABELS.attentionSaliency}</td>
                         <td>{attentionSaliency.toFixed(3)}</td>
                     </tr>
                     <tr>
-                        <td>Total Attention</td>
+                        <td className="flex items-center gap-1">
+                            Total Attention
+                            <div
+                                className="tooltip tooltip-top before:w-64"
+                                data-tip="Ideally 1.0, but may vary if 'Attention Top N' is too low."
+                            >
+                                <QuestionIcon size={16} />
+                            </div>
+                        </td>
                         <td>
                             {(
                                 avgInputAttn * numInputs +
@@ -301,15 +315,22 @@ function Content({ token }: { token: GenerationToken }) {
                         <td>{avgOutputAttn.toFixed(3)}</td>
                     </tr>
                     <tr>
-                        <td>Average Confidence (Output Tokens)</td>
+                        <td>
+                            Average {METRICLABELS.confidence} (Output Tokens)
+                        </td>
                         <td>{avgConf.toFixed(3)}</td>
                     </tr>
                     <tr>
-                        <td>Average Perplexity (Output Tokens)</td>
+                        <td>
+                            Average {METRICLABELS.perplexity} (Output Tokens)
+                        </td>
                         <td>{avgPPL.toFixed(3)}</td>
                     </tr>
                     <tr>
-                        <td>Average Last Perplexity (Output Tokens)</td>
+                        <td>
+                            Average {METRICLABELS.lastPerplexity} (Output
+                            Tokens)
+                        </td>
                         <td>{avgLPPL.toFixed(3)}</td>
                     </tr>
                 </tbody>

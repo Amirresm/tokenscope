@@ -194,7 +194,7 @@ function Chart({
 
             const data: DataPoint[] = [];
             for (const head of heads) {
-                if (selectedToken.reverseAttentionSnapshot[head]?.length > 10) {
+                if (selectedToken.reverseAttentionSnapshot[head]?.length) {
                     for (const { index, attention } of selectedToken
                         .reverseAttentionSnapshot[head]) {
                         const token = currentGeneration[index];
@@ -202,7 +202,7 @@ function Chart({
 
                         data.push({
                             head: head,
-                            position: `# ${index}`,
+                            position: `# ${index + 1}`,
                             token: visualizeWhitespace(token.token),
                             value: attentionValue,
                         });

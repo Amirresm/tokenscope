@@ -41,16 +41,6 @@ const metricOptions = [
         icon: <TargetIcon size={16} />,
     },
     {
-        label: TokenMetrics.perplexity.label,
-        value: "perplexity",
-        icon: <CrosshairIcon size={16} />,
-    },
-    {
-        label: TokenMetrics.lastPerplexity.label,
-        value: "lastPerplexity",
-        icon: <ChartPolarIcon size={16} />,
-    },
-    {
         label: TokenMetrics.marginConfidence.label,
         value: "marginConfidence",
         icon: <ChartBarIcon size={16} />,
@@ -59,6 +49,16 @@ const metricOptions = [
         label: TokenMetrics.entropy.label,
         value: "entropy",
         icon: <ChartScatterIcon size={16} />,
+    },
+    {
+        label: TokenMetrics.perplexity.label,
+        value: "perplexity",
+        icon: <CrosshairIcon size={16} />,
+    },
+    {
+        label: TokenMetrics.lastPerplexity.label,
+        value: "lastPerplexity",
+        icon: <ChartPolarIcon size={16} />,
     },
     {
         label: TokenMetrics.attentionSaliency.label,

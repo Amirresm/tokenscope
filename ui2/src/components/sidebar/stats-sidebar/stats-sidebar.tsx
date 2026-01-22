@@ -11,24 +11,20 @@ import {
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProjectInfo, fetchSample } from "../../../api/projectsAPI";
+import { METRICLABELS } from "../../../constants/labels";
 
 export default function StatsSidebar() {
     const currentGeneration = generationStore.currentGeneration.value;
     const fimStartIndex = generationStore.fimStartToken.value;
     const fimEndIndex = generationStore.fimEndToken.value;
 
-    const confidenceTenPercentiles =
-        generationStore.confidenceTenPercentiles.value;
-    const perplexityTenPercentiles =
-        generationStore.perplexityTenPercentiles.value;
-    const lastPerplexityTenPercentiles =
-        generationStore.lastPerplexityTenPercentiles.value;
-    const marginConfidenceTenPercentiles =
-        generationStore.marginConfidenceTenPercentiles.value;
-    const entropyTenPercentiles = generationStore.entropyTenPercentiles.value;
-
     const stats = React.useMemo(() => {
-        const tokens = currentGeneration.filter(
+        const promptTokens = currentGeneration.filter(
+            (token) =>
+                token.tokenTypes.includes("prompt") ||
+                token.tokenTypes.includes("manual"),
+        );
+        const generationTokens = currentGeneration.filter(
             (token) =>
                 token.position > (fimStartIndex || -1) &&
                 token.position <= (fimEndIndex || 999999) &&
@@ -36,24 +32,36 @@ export default function StatsSidebar() {
                 !token.tokenTypes.includes("manual"),
         );
 
-        if (!tokens.length) {
-            return null;
-        }
+        const confAvg =
+            generationTokens.length > 0
+                ? ss.mean(generationTokens.map((token) => token.confidence))
+                : 0;
+        const lastPPLAvg =
+            generationTokens.length > 0
+                ? ss.mean(
+                      generationTokens
+                          .map((token) => token.lastPerplexity)
+                          .filter(
+                              (ppl): ppl is number =>
+                                  typeof ppl === "number" && !isNaN(ppl),
+                          ),
+                  )
+                : 0;
 
-        const confAvg = ss.mean(tokens.map((token) => token.confidence));
-        const confGeometricMean = ss.geometricMean(
-            tokens.map((token) => token.confidence),
-        );
+        const promptPerplexity =
+            promptTokens.length > 0
+                ? promptTokens[promptTokens.length - 1]?.perplexity
+                : undefined;
 
-        const confStdev = ss.standardDeviation(
-            tokens.map((token) => token.confidence),
-        );
+        const seqPerplexity =
+            generationTokens[generationTokens.length - 1]?.perplexity;
 
         return {
-            generatedTokensCount: tokens.length,
+            generatedTokensCount: generationTokens.length,
             confAvg,
-            confGeometricMean,
-            confStdev,
+            lastPPLAvg,
+            promptPerplexity,
+            seqPerplexity,
         };
     }, [currentGeneration, fimEndIndex, fimStartIndex]);
 
@@ -139,93 +147,124 @@ export default function StatsSidebar() {
 
                     <div className="stats stats-vertical shadow">
                         <div className="stat">
-                            <div className="stat-title">
-                                Generated Tokens Time
-                            </div>
-                            <div className="stat-value text-sm">
-                                {totalTokenTime.toFixed(2)} ms (Avg:{" "}
-                                {(
-                                    totalTokenTime / stats.generatedTokensCount
-                                ).toFixed(2)}
-                                ms)
-                            </div>
-                        </div>
-                        <div className="stat">
                             <div className="stat-title">Generated Tokens</div>
                             <div className="stat-value">
                                 {stats.generatedTokensCount}
                             </div>
                         </div>
                         <div className="stat">
-                            <div className="stat-title">Average Confidence</div>
+                            <div className="stat-title">
+                                Total Generation Time
+                            </div>
+                            <div className="stat-value text-lg">
+                                {totalTokenTime.toFixed(2)} ms
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Average Generation Time
+                            </div>
+                            <div className="stat-value text-lg">
+                                {(
+                                    totalTokenTime / stats.generatedTokensCount
+                                ).toFixed(2)}
+                                ms
+                            </div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">
+                                Average {METRICLABELS.confidence}
+                            </div>
                             <div className="stat-value">
                                 {stats.confAvg.toFixed(2)}
                             </div>
                         </div>
                         <div className="stat">
                             <div className="stat-title">
-                                Geometric Mean Confidence
+                                Average {METRICLABELS.lastPerplexity}
                             </div>
                             <div className="stat-value">
-                                {stats.confGeometricMean.toFixed(2)}
+                                {stats.lastPPLAvg.toFixed(2)}
                             </div>
                         </div>
                         <div className="stat">
-                            <div className="stat-title">Confidence StdDev</div>
+                            <div className="stat-title">Prompt Perplexity</div>
                             <div className="stat-value">
-                                {stats.confStdev.toFixed(2)}
+                                {stats.promptPerplexity?.toFixed(2) || "N/A"}
                             </div>
                         </div>
                         <div className="stat">
                             <div className="stat-title">
-                                Confidence Percentiles
+                                Total Sequence Perplexity
                             </div>
-                            <div className="stat-value text-sm">
-                                {confidenceTenPercentiles
-                                    .map((p) => p.toFixed(2))
-                                    .join(", ")}
+                            <div className="stat-value">
+                                {stats.seqPerplexity?.toFixed(2) || "N/A"}
                             </div>
                         </div>
-                        <div className="stat">
-                            <div className="stat-title">
-                                Perplexity Percentiles
-                            </div>
-                            <div className="stat-value text-sm">
-                                {perplexityTenPercentiles
-                                    .map((p) => p.toFixed(2))
-                                    .join(", ")}
-                            </div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-title">
-                                Last Perplexity Percentiles
-                            </div>
-                            <div className="stat-value text-sm">
-                                {lastPerplexityTenPercentiles
-                                    .map((p) => p.toFixed(2))
-                                    .join(", ")}
-                            </div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-title">
-                                Margin Confidence Percentiles
-                            </div>
-                            <div className="stat-value text-sm">
-                                {marginConfidenceTenPercentiles
-                                    .map((p) => p.toFixed(2))
-                                    .join(", ")}
-                            </div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-title">
-                                Entropy Percentiles
-                            </div>
-                            <div className="stat-value text-sm">
-                                {entropyTenPercentiles
-                                    .map((p) => p.toFixed(2))
-                                    .join(", ")}
-                            </div>
-                        </div>
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Geometric Mean Confidence */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value"> */}
+                        {/*         {stats.confGeometricMean.toFixed(2)} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title">Confidence StdDev</div> */}
+                        {/*     <div className="stat-value"> */}
+                        {/*         {stats.confStdev.toFixed(2)} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Confidence Percentiles */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value text-sm"> */}
+                        {/*         {confidenceTenPercentiles */}
+                        {/*             .map((p) => p.toFixed(2)) */}
+                        {/*             .join(", ")} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Perplexity Percentiles */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value text-sm"> */}
+                        {/*         {perplexityTenPercentiles */}
+                        {/*             .map((p) => p.toFixed(2)) */}
+                        {/*             .join(", ")} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Last Perplexity Percentiles */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value text-sm"> */}
+                        {/*         {lastPerplexityTenPercentiles */}
+                        {/*             .map((p) => p.toFixed(2)) */}
+                        {/*             .join(", ")} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Margin Confidence Percentiles */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value text-sm"> */}
+                        {/*         {marginConfidenceTenPercentiles */}
+                        {/*             .map((p) => p.toFixed(2)) */}
+                        {/*             .join(", ")} */}
+                        {/*     </div> */}
+                        {/* </div> */}
+                        {/* <div className="stat"> */}
+                        {/*     <div className="stat-title"> */}
+                        {/*         Entropy Percentiles */}
+                        {/*     </div> */}
+                        {/*     <div className="stat-value text-sm"> */}
+                        {/*         {entropyTenPercentiles */}
+                        {/*             .map((p) => p.toFixed(2)) */}
+                        {/*             .join(", ")} */}
+                        {/*     </div> */}
+                        {/* </div> */}
                     </div>
                 </div>
             </div>

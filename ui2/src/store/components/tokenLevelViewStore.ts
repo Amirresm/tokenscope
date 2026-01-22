@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals-react";
+import { METRICLABELS } from "../../constants/labels";
 
 export enum ColorVerbosityEnum {
     VERBOSE = "verbose",
@@ -7,12 +8,14 @@ export enum ColorVerbosityEnum {
 }
 
 export const TokenMetrics = {
-    confidence: { label: "Confidence" },
-    perplexity: { label: "Perplexity" },
-    lastPerplexity: { label: "Last Perplexity" },
-    marginConfidence: { label: "Margin Confidence" },
-    entropy: { label: "Entropy" },
-    attentionSaliency: { label: "Attention Saliency (Select an Attn. Head)" },
+    confidence: { label: METRICLABELS.confidence },
+    marginConfidence: { label: METRICLABELS.marginConfidence },
+    entropy: { label: METRICLABELS.entropy },
+    perplexity: { label: METRICLABELS.perplexity },
+    lastPerplexity: { label: METRICLABELS.lastPerplexity },
+    attentionSaliency: {
+        label: `${METRICLABELS.attentionSaliency} (For Selected Head)`,
+    },
 } as const;
 
 type TokenLevelViewConfigType = {

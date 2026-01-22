@@ -143,7 +143,6 @@ const handleTokenGenerationStream = async (
     //         contextAwareNLLs[i];
     // }
 
-    console.log("Calculating Attention Saliency...");
     // attention saliency
     const attentionHeads =
         generationStore.currentGeneration.value.length > 0
@@ -156,25 +155,20 @@ const handleTokenGenerationStream = async (
     if (attentionHeads.length > 0) {
         for (const head of attentionHeads) {
             for (const token of generationStore.currentGeneration.value) {
-                token.attentionSaliences[head] = 0;
                 if (token.reverseAttentionSnapshot === undefined) {
                     token.reverseAttentionSnapshot = {};
                 }
                 token.reverseAttentionSnapshot[head] = [];
-                let numContributions = 0;
                 for (const otherToken of generationStore.currentGeneration
                     .value) {
-                    if (token.position >= otherToken.position) {
+                    if (token.position > otherToken.position) {
                         continue;
                     }
                     if (otherToken.attentionSnapshot) {
                         for (const attnInfo of otherToken.attentionSnapshot[
                             head
                         ]) {
-                            numContributions += 1;
                             if (attnInfo.index === token.position) {
-                                token.attentionSaliences[head] +=
-                                    attnInfo.attention;
                                 token.reverseAttentionSnapshot[head].push({
                                     index: otherToken.position,
                                     attention: attnInfo.attention,
@@ -183,31 +177,56 @@ const handleTokenGenerationStream = async (
                         }
                     }
                 }
-                token.attentionSaliences[head] /=
-                    numContributions > 0 ? numContributions : 1;
                 token.reverseAttentionSnapshot[head].sort(
                     (a, b) => b.attention - a.attention,
                 );
             }
-
-            const attentionSaliencyValues = clampOutliers(
-                generationStore.currentGeneration.value
-                    .filter((t) => t.attentionSaliences[head] !== undefined)
-                    .map((t) =>
-                        t.attentionSaliences[head] !== undefined
-                            ? t.attentionSaliences[head]
-                            : 0,
-                    ),
-                0,
-            );
-            const numBuckets = 5;
-            const attentionSaliencyPercentiles = calcAllPercentiles(
-                attentionSaliencyValues,
-                numBuckets,
-            );
-            generationStore.attentionSaliencyTenPercentiles.value[head] =
-                attentionSaliencyPercentiles;
         }
+    }
+
+    //TEMP
+    for (const token of generationStore.currentGeneration.value) {
+        if (token.marginConfidence !== undefined) {
+            token.marginConfidence = token.confidence - token.marginConfidence;
+        }
+    }
+
+    // redo attention saliency
+    for (const head of attentionHeads) {
+        for (const token of generationStore.currentGeneration.value) {
+            token.attentionSaliences[head] = 0;
+            if (
+                token.reverseAttentionSnapshot &&
+                token.reverseAttentionSnapshot[head]
+            ) {
+                const totalAttention = token.reverseAttentionSnapshot[
+                    head
+                ].reduce((sum, attnInfo) => sum + attnInfo.attention, 0);
+                const numContributions =
+                    token.reverseAttentionSnapshot[head].length;
+                if (numContributions > 0) {
+                    token.attentionSaliences[head] =
+                        totalAttention / numContributions;
+                }
+            }
+        }
+        const attentionSaliencyValues = clampOutliers(
+            generationStore.currentGeneration.value
+                .filter((t) => t.attentionSaliences[head] !== undefined)
+                .map((t) =>
+                    t.attentionSaliences[head] !== undefined
+                        ? t.attentionSaliences[head]
+                        : 0,
+                ),
+            0,
+        );
+        const numBuckets = 5;
+        const attentionSaliencyPercentiles = calcAllPercentiles(
+            attentionSaliencyValues,
+            numBuckets,
+        );
+        generationStore.attentionSaliencyTenPercentiles.value[head] =
+            attentionSaliencyPercentiles;
     }
 
     console.log("Calculating Percentiles...");

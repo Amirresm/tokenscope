@@ -3,7 +3,10 @@ import { GearIcon, RobotIcon, TreeStructureIcon } from "@phosphor-icons/react";
 import { TokenLevelConfigDropdown } from "../TokenLevelConfigDropdown";
 import React from "react";
 import globalStore from "../../store/components/globalStore";
-import astStore, { ViewModesEnum } from "../../store/components/astStore";
+import astStore, {
+    ASTViewModeLabels,
+    ViewModesEnum,
+} from "../../store/components/astStore";
 import generationStore from "../../store/generationStore";
 import drawerStore, {
     DrawerTabsEnum,
@@ -22,7 +25,7 @@ function AstPageActions() {
         <>
             <div className="dropdown">
                 <div tabIndex={0} role="button" className="btn btn-sm">
-                    AST Mode: {astViewMode}
+                    AST Mode: {ASTViewModeLabels[astViewMode]}
                 </div>
                 <ul
                     tabIndex={0}
@@ -35,7 +38,7 @@ function AstPageActions() {
                                     astViewMode === mode ? "font-bold" : ""
                                 }
                             >
-                                {mode}
+                                {ASTViewModeLabels[mode]}
                             </a>
                         </li>
                     ))}

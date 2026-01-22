@@ -244,15 +244,15 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
                     {String(lineNumber).padStart(2, "0")}
                 </span>
             )}
-            {showLineInfo && lineConfidence !== undefined && (
-                <span
-                    className={`${startOfLineMarkerColor} text-xs border rounded-lg px-1 mr-1`}
-                >
-                    {lineConfidence.toFixed(2)}
-                </span>
-            )}
+            {/* {showLineInfo && lineConfidence !== undefined && ( */}
+            {/*     <span */}
+            {/*         className={`${startOfLineMarkerColor} text-xs border rounded-lg px-1 mr-1`} */}
+            {/*     > */}
+            {/*         {lineConfidence.toFixed(2)} */}
+            {/*     </span> */}
+            {/* )} */}
             <div
-                className="tooltip tooltip-bottom inline"
+                className="tooltip tooltip-bottom inline before:max-w-40"
                 data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(6)}`}
             >
                 {isSelected ? visualizeWhitespace(token) : token}

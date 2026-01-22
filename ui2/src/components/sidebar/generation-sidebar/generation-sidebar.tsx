@@ -6,6 +6,7 @@ import { GenerationToken } from "../../../models/generationToken";
 import sessionStore from "../../../store/sessionStore";
 import generationStore from "../../../store/generationStore";
 import { continueGeneration } from "../../../api/generationAPI";
+import { METRICLABELS } from "../../../constants/labels";
 
 // type GenerationMode = "continue" | "fim";
 
@@ -170,7 +171,7 @@ export function Content({ token }: { token: GenerationToken }) {
                     ))
                 ) : (
                     <div className="text-sm italic text-gray-500">
-                        No Special Token Type
+                        Not a Special Token Type
                     </div>
                 )}
             </div>
@@ -191,39 +192,39 @@ export function Content({ token }: { token: GenerationToken }) {
                             </td>
                         </tr>
                         <tr className="text-xs">
-                            <td>PPL</td>
+                            <td>{METRICLABELS.perplexity}</td>
                             <td className="text-center">
                                 {token.perplexity === undefined
                                     ? "Not Calculated"
                                     : isNaN(token.perplexity)
                                       ? "N/A"
-                                      : token.perplexity}
+                                      : token.perplexity.toFixed(6)}
                             </td>
                         </tr>
                         <tr className="text-xs">
-                            <td>Last PPL</td>
+                            <td>{METRICLABELS.lastPerplexity}</td>
                             <td className="text-center">
                                 {token.lastPerplexity === undefined
                                     ? "Not Calculated"
                                     : isNaN(token.lastPerplexity)
                                       ? "N/A"
-                                      : token.lastPerplexity}
+                                      : token.lastPerplexity.toFixed(6)}
                             </td>
                         </tr>
                         <tr className="text-xs">
-                            <td>Margin Conf.</td>
+                            <td>{METRICLABELS.marginConfidence}</td>
                             <td className="text-center">
                                 {token.marginConfidence === undefined
                                     ? "Not Calculated"
-                                    : token.marginConfidence}
+                                    : token.marginConfidence.toFixed(6)}
                             </td>
                         </tr>
                         <tr className="text-xs">
-                            <td>Entropy</td>
+                            <td>{METRICLABELS.entropy}</td>
                             <td className="text-center">
                                 {token.entropy === undefined
                                     ? "Not Calculated"
-                                    : token.entropy}
+                                    : token.entropy.toFixed(6)}
                             </td>
                         </tr>
                     </tbody>

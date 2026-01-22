@@ -88,7 +88,7 @@ export function GenericAstView({
                     groupKey = `Line ${tokenInfo.lineNumber}`;
                     break;
                 case ViewModesEnum.AtomicBlock2:
-                    groupKey = `${tokenInfo.atomicBlock?.type} - ${tokenInfo.atomicBlock?.depth}`;
+                    groupKey = `${tokenInfo.atomicBlock?.depth} > ${tokenInfo.atomicBlock?.type}`;
                     break;
             }
             const lastGroupKey =

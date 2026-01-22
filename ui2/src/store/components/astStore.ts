@@ -16,8 +16,18 @@ export enum ViewModesEnum {
     AtomicBlock2 = "Block",
 }
 
+export const ASTViewModeLabels = {
+    [ViewModesEnum.Type]: "Token",
+    [ViewModesEnum.Category]: "Expression",
+    [ViewModesEnum.Group]: "Statement",
+    [ViewModesEnum.LineNumber]: "Line Number",
+    [ViewModesEnum.AtomicBlock2]: "Block",
+};
+
 const astViewMode = signal<ViewModesEnum>(ViewModesEnum.Type);
-const astColorVerbosity = signal<ASTColorVerbosityEnum>(ASTColorVerbosityEnum.NORMAL);
+const astColorVerbosity = signal<ASTColorVerbosityEnum>(
+    ASTColorVerbosityEnum.NORMAL,
+);
 
 const selectedRange = signal<{ start: number; end: number } | null>(null);
 

@@ -7,6 +7,7 @@ import am5themes_Material from "@amcharts/amcharts5/themes/Material";
 import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
 import generationStore from "../../store/generationStore";
 import { getOutliers } from "../../utils/outlier";
+import { METRICLABELS } from "../../constants/labels";
 
 function visualizeWhitespace(str: string) {
     return str
@@ -77,7 +78,7 @@ function Chart() {
             }),
         );
         const colors = chart.get("colors");
-        if (colors) colors.set("step", 3);
+        if (colors) colors.set("step", 2);
 
         const exporting = am5plugins_exporting.Exporting.new(root, {
             menu: am5plugins_exporting.ExportingMenu.new(root, {}),
@@ -130,6 +131,11 @@ function Chart() {
                 }),
             );
 
+            if (m === "confidence" || m === "marginConfidence") {
+                yAxis.set("min", 0);
+                yAxis.set("max", 1);
+            }
+
             if (chart.yAxes.indexOf(yAxis) > 0) {
                 yAxis.set("syncWithAxis", chart.yAxes.getIndex(0));
             }
@@ -142,6 +148,8 @@ function Chart() {
                     valueYField: m,
                     categoryXField: "position",
                     minBulletDistance: 10,
+                    legendLabelText: METRICLABELS[m],
+                    legendValueText: `{valueY}`,
                 }),
             );
 
@@ -201,7 +209,7 @@ function Chart() {
             const tooltip = series.set(
                 "tooltip",
                 am5.Tooltip.new(root, {
-                    labelText: `[fontSize: 10px]{position}: '{tokenString}'\n${m.charAt(0).toUpperCase() + m.slice(1)}: {${m}}[/]`,
+                    labelText: `[fontSize: 10px]{position}: '{tokenString}'\n${METRICLABELS[m]}: {${m}}[/]`,
                 }),
             );
             const background = tooltip.get("background");
@@ -222,8 +230,18 @@ function Chart() {
 
         // Add legend
         let legend = chart.children.push(
-            am5.Legend.new(root, { marginBottom: 16 }),
+            am5.Legend.new(root, {
+                marginBottom: 16,
+            }),
         );
+        legend.labels.template.setAll({
+            fontSize: 12,
+        });
+
+        legend.valueLabels.template.setAll({
+            fontSize: 12,
+        });
+
         legend.data.setAll(chart.series.values);
 
         // Add cursor

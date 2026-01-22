@@ -5,7 +5,10 @@ import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
 import am5themes_Material from "@amcharts/amcharts5/themes/Material";
 import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
-import astStore, { ViewModesEnum } from "../../store/components/astStore";
+import astStore, {
+    ASTViewModeLabels,
+    ViewModesEnum,
+} from "../../store/components/astStore";
 import generationStore from "../../store/generationStore";
 
 type DataPoint = {
@@ -251,7 +254,7 @@ export function ASTStatsChartModal() {
                                     role="button"
                                     className="btn btn-sm"
                                 >
-                                    AST Mode: {astViewMode}
+                                    AST Mode: {ASTViewModeLabels[astViewMode]}
                                 </div>
                                 <ul
                                     tabIndex={0}
@@ -273,7 +276,7 @@ export function ASTStatsChartModal() {
                                                             : ""
                                                     }
                                                 >
-                                                    {mode}
+                                                    {ASTViewModeLabels[mode]}
                                                 </a>
                                             </li>
                                         ),
@@ -281,7 +284,7 @@ export function ASTStatsChartModal() {
                                 </ul>
                             </div>
                         </div>
-                        <div className="flex-grow min-h-0">
+                        <div className="grow min-h-0">
                             <Chart />
                         </div>
                     </div>

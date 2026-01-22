@@ -59,6 +59,8 @@ export function PromptInput() {
         } else {
             generationStore.selectedToken.value = undefined;
             generationStore.generationAbort.value = new AbortController();
+            drawerStore.setDrawerTab(DrawerTabsEnum.STATS);
+            drawerStore.openDrawer();
             await generateNew(
                 value,
                 generationStore.generationSettings.value,
@@ -66,8 +68,6 @@ export function PromptInput() {
                 undefined,
                 generationStore.generationAbort.value,
             );
-            drawerStore.setDrawerTab(DrawerTabsEnum.STATS);
-            drawerStore.openDrawer();
         }
 
         generationStore.isGenerating.value = false;
@@ -139,7 +139,9 @@ export function PromptInput() {
                     <input
                         type="number"
                         min={0}
-                        value={generationStore.generationSettings.value.maxTokens}
+                        value={
+                            generationStore.generationSettings.value.maxTokens
+                        }
                         onChange={(e) =>
                             generationStore.updateGenerationSettings({
                                 maxTokens: parseInt(e.target.value),
