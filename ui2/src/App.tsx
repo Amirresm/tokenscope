@@ -48,6 +48,33 @@ function App() {
         [drawerOpen, drawerState],
     );
 
+    React.useEffect(() => {
+        // if system dark, set dark mode
+        if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+        ) {
+            document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const handleChange = (e: MediaQueryListEvent) => {
+            console.log("Theme change detected:", e.matches ? "dark" : "light");
+            if (e.matches) {
+                document.documentElement.setAttribute("data-theme", "dark");
+            } else {
+                document.documentElement.setAttribute("data-theme", "light");
+            }
+        };
+        mediaQuery.addEventListener("change", handleChange);
+
+        return () => {
+            mediaQuery.removeEventListener("change", handleChange);
+        };
+    }, []);
+
     const tabs = globalStore.viewMode.value === "ast" ? astTabs : genTabs;
 
     return (
@@ -64,7 +91,7 @@ function App() {
                 <LandingPage />
             </div>
             <div className="sticky top-0 h-screen flex z-10">
-                <div className="flex flex-col items-center gap-2 my-4">
+                <div className="flex flex-col items-center gap-2 py-4 px-1">
                     {tabs.map(({ tab, icon: Icon, label }) => (
                         <div
                             className="tooltip tooltip-left"

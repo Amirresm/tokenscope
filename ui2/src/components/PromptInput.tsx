@@ -85,6 +85,9 @@ export function PromptInput() {
     return (
         <div className="h-full sticky z-10 top-0 px-36 pt-4 backdrop-blur-lg flex flex-col justify-center">
             <div className="fixed inset-0 main-bg-gradient -z-10" />
+            <div className="fixed top-1/12 left-0 right-0 flex justify-center mt-8">
+                <h1 className="text-logo">TokenScope</h1>
+            </div>
             <div className="flex gap-2 mb-1 items-center">
                 <button
                     className="btn btn-ghost"
