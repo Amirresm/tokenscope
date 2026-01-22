@@ -20,6 +20,8 @@ export type GenerationSettings = {
     attentionLayer: number;
     attentionTopN: number;
 };
+const presetPrompt = signal<string | undefined>(undefined);
+
 const generationSettings = signal<GenerationSettings>({
     maxTokens: 256,
     topK: 1,
@@ -225,6 +227,7 @@ const resetGenerationStore = () => {
 };
 
 export default {
+    presetPrompt,
     generationSettings,
     updateGenerationSettings,
 

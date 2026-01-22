@@ -6,6 +6,9 @@ import generationStore from "../../store/generationStore";
 import drawerStore, {
     DrawerTabsEnum,
 } from "../../store/components/drawerStore";
+import astStore from "../../store/components/astStore";
+import globalStore from "../../store/components/globalStore";
+import tokenLevelViewStore from "../../store/components/tokenLevelViewStore";
 
 export function MainBar() {
     const currentModelQuery = useCurrentModelQuery();
@@ -13,6 +16,9 @@ export function MainBar() {
 
     const handleNewSession = React.useCallback(() => {
         generationStore.resetGenerationStore();
+        astStore.resetAstStore();
+        globalStore.resetGlobalStore();
+        tokenLevelViewStore.resetConfig();
         sessionStore.resetSession();
         drawerStore.closeDrawer();
         drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);

@@ -41,7 +41,17 @@ function updateTokenLevelViewConfig(
     };
 }
 
+const resetTokenLevelViewConfig = () => {
+    tokenLevelViewConfigSignal.value = {
+        colorVerbosity: ColorVerbosityEnum.NORMAL,
+        specialTokenFilter: true,
+        showLineInfo: false,
+        tokenMetric: "confidence",
+    };
+};
+
 export default {
     config: tokenLevelViewConfigSignal,
     updateConfig: updateTokenLevelViewConfig,
+    resetConfig: resetTokenLevelViewConfig,
 };

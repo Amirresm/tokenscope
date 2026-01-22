@@ -12,9 +12,9 @@ export function PromptInput() {
     const sessionId = sessionStore.sessionId.value;
     const branchId = sessionStore.branchId.value;
 
-    const generationSettings = generationStore.generationSettings.value;
+    const presetPrompt = generationStore.presetPrompt.value;
 
-    const [value, setValue] = React.useState("");
+    const [value, setValue] = React.useState(presetPrompt || "");
 
     const isGenerating = generationStore.isGenerating.value;
     const isPaused = generationStore.paused.value;
@@ -39,6 +39,7 @@ export function PromptInput() {
             return;
         }
 
+        generationStore.presetPrompt.value = undefined;
         generationStore.clearGeneration();
         generationStore.isGenerating.value = true;
         generationStore.paused.value = false;

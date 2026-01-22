@@ -43,10 +43,19 @@ const astGroups = signal<
     }[]
 >([]);
 
+const resetAstStore = () => {
+    astViewMode.value = ViewModesEnum.Type;
+    astColorVerbosity.value = ASTColorVerbosityEnum.NORMAL;
+    selectedRange.value = null;
+    avgAttentionMap.value = {};
+    astGroups.value = [];
+};
+
 export default {
     astViewMode,
     astColorVerbosity,
     selectedRange,
     avgAttentionMap,
     astGroups,
+    resetAstStore,
 };

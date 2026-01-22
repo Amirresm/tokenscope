@@ -33,6 +33,7 @@ const SessionSidebar = () => {
                 return;
             }
 
+            generationStore.presetPrompt.value = undefined;
             generationStore.clearGeneration();
             generationStore.isGenerating.value = true;
             generationStore.paused.value = false;

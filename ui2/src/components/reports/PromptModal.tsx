@@ -1,5 +1,12 @@
 import React from "react";
 import generationStore from "../../store/generationStore";
+import astStore from "../../store/components/astStore";
+import globalStore from "../../store/components/globalStore";
+import tokenLevelViewStore from "../../store/components/tokenLevelViewStore";
+import sessionStore from "../../store/sessionStore";
+import drawerStore, {
+    DrawerTabsEnum,
+} from "../../store/components/drawerStore";
 
 function Content() {
     const currentGeneration = generationStore.currentGeneration.value;
@@ -39,6 +46,37 @@ function Content() {
         [promptTokens, manualContinueTokens],
     );
 
+    const startNewSessionWithPrompt = React.useCallback(
+        (target: "prompt" | "manual") => {
+            const modal = document.getElementById(
+                "prompt_modal",
+            ) as HTMLDialogElement;
+            modal.close();
+            let prompt = "";
+            if (target === "prompt") {
+                prompt = promptTokens
+                    .filter((t) => !t.tokenTypes.includes("special"))
+                    .map((t) => t.token)
+                    .join("");
+            } else {
+                prompt = manualContinueTokens
+                    .filter((t) => !t.tokenTypes.includes("special"))
+                    .map((t) => t.token)
+                    .join("");
+            }
+
+            generationStore.presetPrompt.value = prompt;
+            generationStore.resetGenerationStore();
+            astStore.resetAstStore();
+            globalStore.resetGlobalStore();
+            tokenLevelViewStore.resetConfig();
+            sessionStore.resetSession();
+            drawerStore.closeDrawer();
+            drawerStore.setDrawerTab(DrawerTabsEnum.SESSION);
+        },
+        [promptTokens, manualContinueTokens],
+    );
+
     return (
         <div className="p-1">
             <div className="mt-2 h-full overflow-y-auto">
@@ -49,6 +87,12 @@ function Content() {
                         onClick={() => copyToClipboard("prompt")}
                     >
                         Copy
+                    </button>
+                    <button
+                        className="btn btn-sm btn-secondary btn-ghost ml-4"
+                        onClick={() => startNewSessionWithPrompt("prompt")}
+                    >
+                        Start New Session with Prompt
                     </button>
                 </div>
                 <div className="whitespace-pre-wrap px-1">
@@ -75,9 +119,15 @@ function Content() {
                         Tokens)
                         <button
                             className="btn btn-sm btn-secondary btn-ghost ml-4"
-                            onClick={() => copyToClipboard("prompt")}
+                            onClick={() => copyToClipboard("manual")}
                         >
                             Copy
+                        </button>
+                        <button
+                            className="btn btn-sm btn-secondary btn-ghost ml-4"
+                            onClick={() => startNewSessionWithPrompt("manual")}
+                        >
+                            Start New Session with Prompt
                         </button>
                     </div>
                     <div className="whitespace-pre-wrap px-1">
