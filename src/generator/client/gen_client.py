@@ -9,8 +9,9 @@ from src.generator.token_node import Token
 
 
 class GenClient(Generator):
-    def __init__(self):
-        self.url = "ws://localhost:4001/gen/ws"
+    def __init__(self, host: str, port: int):
+        self.host = host
+        self.port = port
 
     def generate_yield(
         self,
@@ -26,7 +27,7 @@ class GenClient(Generator):
         attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]:
-        with connect(self.url) as websocket:
+        with connect(f"ws://{self.host}:{self.port}/gen/ws") as websocket:
             init_message = {
                 "prompt": prompts,
                 "prompts_tokens": (
@@ -73,7 +74,7 @@ class GenClient(Generator):
                     break
 
     def prompts_to_token(self, prompts: list[str]) -> list[list[Token]]:
-        url = "http://localhost:4001/gen/prompts_to_tokens"
+        url = f"http://{self.host}:{self.port}/gen/prompts_to_tokens"
         payload = {"prompts": prompts}
         response = requests.post(url, json=payload)
         response_data = response.json()

@@ -30,10 +30,10 @@ def main():
         print("Starting all servers...")
         import multiprocessing
 
-        def run_server(target, port):
+        def run_server(target, port, *args):
             import uvicorn
 
-            LOGGING_CONFIG = uvicorn.config.LOGGING_CONFIG.copy() # type: ignore
+            LOGGING_CONFIG = uvicorn.config.LOGGING_CONFIG.copy()  # type: ignore
             LOGGING_CONFIG["formatters"]["default"][
                 "fmt"
             ] = "[%(processName)s] %(asctime)s %(levelprefix)s %(message)s"
@@ -41,7 +41,7 @@ def main():
                 "fmt"
             ] = "[%(processName)s] %(asctime)s %(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s"
 
-            app = target()
+            app = target(*args)
             uvicorn.run(
                 app,
                 host="0.0.0.0",
@@ -57,7 +57,7 @@ def main():
         processes.append(
             multiprocessing.Process(
                 target=run_server,
-                args=(create_app, 4000),
+                args=(create_app, 4000, "/api", "localhost", 4001),
                 name="API",
             )
         )
@@ -66,7 +66,7 @@ def main():
         processes.append(
             multiprocessing.Process(
                 target=run_server,
-                args=(create_gen_app, 4001),
+                args=(create_gen_app, 4001, "/gen"),
                 name="GEN",
             )
         )
@@ -77,10 +77,23 @@ def main():
                 target=run_server, args=(create_ui_app, 3000), name="WEB"
             )
         )
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+        try:
+            for p in processes:
+                p.start()
+            for p in processes:
+                p.join()
+        except KeyboardInterrupt:
+            print("Shutting down servers...")
+            for p in processes:
+                p.terminate()
+            for p in processes:
+                p.join()
+        except Exception as e:
+            print(f"Error: {e}")
+            for p in processes:
+                p.terminate()
+            for p in processes:
+                p.join()
 
 
 if __name__ == "__main__":

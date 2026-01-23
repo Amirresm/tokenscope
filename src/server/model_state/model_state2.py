@@ -17,9 +17,12 @@ class Session:
 
 
 class ModelState:
-    def __init__(self) -> None:
+    def __init__(self, gen_server_host: str, gen_server_port: int) -> None:
         self.generate_lock = threading.Lock()
-        self.batch_generator = GenClient()
+        self.batch_generator = GenClient(
+            host=gen_server_host,
+            port=gen_server_port,
+        )
 
         self.ast_service = ASTService()
 

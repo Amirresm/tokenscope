@@ -1,10 +1,9 @@
 import asyncio
-from contextlib import asynccontextmanager
 import json
 
 from fastapi.websockets import WebSocketDisconnect
 from rich import print as rprint
-from fastapi import FastAPI, WebSocket, Request
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from websockets import ConnectionClosed
 
@@ -14,14 +13,21 @@ from src.generator.token_node import Token
 router = FastAPI().router
 
 
+class SharedResources:
+    provider: GeneratorProvider
+
+
+shared_resources = SharedResources()
+
+
 @router.get("/health")
 async def health_check():
     return {"status": "ok"}
 
 
 @router.get("/current_model")
-async def current_model(request: Request):
-    provider: GeneratorProvider = request.app.state.provider
+async def current_model():
+    provider = shared_resources.provider
 
     model_source = provider.model_source
     current_model = provider.model_name_or_path
@@ -33,8 +39,8 @@ async def current_model(request: Request):
 
 
 @router.get("/available_models")
-async def available_models(request: Request, source: str):
-    provider: GeneratorProvider = request.app.state.provider
+async def available_models(source: str):
+    provider = shared_resources.provider
 
     model_source = ModelSource(source)
 
@@ -44,8 +50,8 @@ async def available_models(request: Request, source: str):
 
 
 @router.post("/load_model")
-async def load_model(request: Request, payload: dict):
-    provider: GeneratorProvider = request.app.state.provider
+async def load_model(payload: dict):
+    provider = shared_resources.provider
 
     source = ModelSource(payload["source"])
     model_name_or_path = payload["model_name_or_path"]
@@ -56,8 +62,8 @@ async def load_model(request: Request, payload: dict):
 
 
 @router.post("/prompts_to_tokens")
-async def prompts_to_tokens(request: Request, payload: dict):
-    provider: GeneratorProvider = request.app.state.provider
+async def prompts_to_tokens(payload: dict):
+    provider = shared_resources.provider
 
     prompts = payload["prompts"]
     tokens = provider.prompts_to_token(prompts)
@@ -73,7 +79,7 @@ async def prompts_to_tokens(request: Request, payload: dict):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     rprint(websocket.state)
-    provider: GeneratorProvider = websocket.app.state.provider
+    provider = shared_resources.provider
 
     print(f"Client connected: {websocket.client}")
 
@@ -139,15 +145,12 @@ async def websocket_endpoint(websocket: WebSocket):
             raise e
 
 
-def create_app():
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        provider = GeneratorProvider()
-        app.state.provider = provider
-        yield
+def create_app(prefix: str = "/gen"):
+    provider = GeneratorProvider()
+    shared_resources.provider = provider
 
-    app = FastAPI(lifespan=lifespan)
-    app.include_router(router, prefix="/gen")
+    app = FastAPI(title="Generation Server")
+    app.include_router(router, prefix=prefix)
 
     app.add_middleware(
         CORSMiddleware,

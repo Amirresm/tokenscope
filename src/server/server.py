@@ -1,8 +1,6 @@
-from contextlib import asynccontextmanager
 import typing
 import fastapi
 from fastapi.responses import StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 
@@ -12,12 +10,24 @@ from src.server.model_state.model_state2 import ModelState
 
 router = fastapi.APIRouter()
 
-GEN_URL = "http://localhost:4001/gen"
+
+class SharedResources:
+    model_state: ModelState
+    static_provider: StaticProvider
+    gen_server_host: str
+    gen_server_port: int
+
+
+shared_resources = SharedResources()
 
 
 @router.get("/current_model")
 async def current_model():
-    response = requests.get(f"{GEN_URL}/current_model")
+    gen_server_host = shared_resources.gen_server_host
+    gen_server_port = shared_resources.gen_server_port
+    gen_client_url = f"http://{gen_server_host}:{gen_server_port}/gen"
+
+    response = requests.get(f"{gen_client_url}/current_model")
     response_data = response.json()
 
     model_source = response_data.get("model_source")
@@ -31,9 +41,13 @@ async def current_model():
 
 @router.get("/available_models")
 async def available_models(source: str):
+    gen_server_host = shared_resources.gen_server_host
+    gen_server_port = shared_resources.gen_server_port
+    gen_client_url = f"http://{gen_server_host}:{gen_server_port}/gen"
     model_source = ModelSource(source)
     response = requests.get(
-        f"{GEN_URL}/available_models", params={"source": model_source.value}
+        f"{gen_client_url}/available_models",
+        params={"source": model_source.value},
     )
     response_data = response.json()
 
@@ -42,12 +56,15 @@ async def available_models(source: str):
 
 
 @router.post("/load_model")
-async def load_model(request: fastapi.Request, payload: dict):
+async def load_model(payload: dict):
     source = ModelSource(payload["source"])
     model_name_or_path = payload["model_name_or_path"]
+    gen_server_host = shared_resources.gen_server_host
+    gen_server_port = shared_resources.gen_server_port
+    gen_client_url = f"http://{gen_server_host}:{gen_server_port}/gen"
 
     response = requests.post(
-        f"{GEN_URL}/load_model",
+        f"{gen_client_url}/load_model",
         json={
             "source": source.value,
             "model_name_or_path": model_name_or_path,
@@ -55,32 +72,32 @@ async def load_model(request: fastapi.Request, payload: dict):
     )
     response_data = response.json()
     if response.status_code == 200:
-        model_state = typing.cast(ModelState, request.state.model_state)
+        model_state = typing.cast(ModelState, shared_resources.model_state)
         model_state.ast_service.update_tokenizer(model_name_or_path)
 
     return response_data
 
 
 @router.get("/sessions")
-async def get_sessions(request: fastapi.Request):
-    model_state = typing.cast(ModelState, request.state.model_state)
+async def get_sessions():
+    model_state = typing.cast(ModelState, shared_resources.model_state)
     sessions = model_state.get_sessions()
     return {"sessions": list(sessions.keys())}
 
 
 @router.get("/session_branches")
-async def get_session_branches(request: fastapi.Request, session_id: str):
-    model_state = typing.cast(ModelState, request.state.model_state)
+async def get_session_branches(session_id: str):
+    model_state = typing.cast(ModelState, shared_resources.model_state)
     branches = model_state.get_session_branches(session_id)
     return {"branches": list(branches)}
 
 
 @router.post("/prefill_generation")
-async def prefill_generation(request: fastapi.Request, request_data: dict):
+async def prefill_generation(request_data: dict):
     session_id = request_data["session_id"]
     branch_id = request_data["branch_id"]
 
-    model_state = typing.cast(ModelState, request.state.model_state)
+    model_state = typing.cast(ModelState, shared_resources.model_state)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -95,10 +112,10 @@ async def prefill_generation(request: fastapi.Request, request_data: dict):
 
 
 @router.post("/get_generation_tree")
-async def get_generation_tree(request: fastapi.Request, request_data: dict):
+async def get_generation_tree(request_data: dict):
     session_id = request_data["session_id"]
 
-    model_state = typing.cast(ModelState, request.state.model_state)
+    model_state = typing.cast(ModelState, shared_resources.model_state)
 
     if session_id not in model_state.sessions:
         raise fastapi.HTTPException(status_code=404, detail="Session not found")
@@ -110,13 +127,12 @@ async def get_generation_tree(request: fastapi.Request, request_data: dict):
 
 @router.get("/get_ast")
 async def get_ast(
-    request: fastapi.Request,
     session_id: str,
     branch_id: str,
     start: int,
     end: int,
 ):
-    model_state = typing.cast(ModelState, request.state.model_state)
+    model_state = typing.cast(ModelState, shared_resources.model_state)
 
     ast = model_state.get_ast(
         session_id,
@@ -140,7 +156,7 @@ async def generate(request: fastapi.Request, request_data: dict):
     attention_top_n = request_data.get("attention_top_n", 10)
     record_attention = attention_top_n > 0
 
-    model_state = typing.cast(ModelState, request.state.model_state)
+    model_state = typing.cast(ModelState, shared_resources.model_state)
     # model_state.generator.set_attn_layer(attn_layer)
 
     headers = {"X-Content-Type-Options": "nosniff"}
@@ -179,8 +195,7 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
     attention_top_n = request_data.get("attention_top_n", 10)
     record_attention = attention_top_n > 0
 
-    model_state = typing.cast(ModelState, request.state.model_state)
-    # model_state.generator.set_attn_layer(attn_layer)
+    model_state = typing.cast(ModelState, shared_resources.model_state)
 
     headers = {"X-Content-Type-Options": "nosniff"}
 
@@ -220,7 +235,7 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
 #         )
 #
 #     base = [StepResult.from_json(step) for step in base]
-#     model_state = typing.cast(ModelState, request.state.model_state)
+#     model_state = typing.cast(ModelState, shared_resources.model_state)
 #     model_state.generator.set_attn_layer(attn_layer)
 #
 #     headers = {"X-Content-Type-Options": "nosniff"}
@@ -240,40 +255,54 @@ async def continue_generate(request: fastapi.Request, request_data: dict):
 
 
 @router.get("/fetch_projects")
-async def fetch_projects(request: fastapi.Request):
-    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+async def fetch_projects():
+    static_provider = typing.cast(
+        StaticProvider, shared_resources.static_provider
+    )
     projects = static_provider.get_project_names()
     return projects
 
 
 @router.get("/get_project")
-async def get_project(request: fastapi.Request, project_name: str):
-    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+async def get_project(project_name: str):
+    static_provider = typing.cast(
+        StaticProvider, shared_resources.static_provider
+    )
     project = static_provider.get_project_info(project_name)
     return project
 
 
 @router.get("/get_sample")
-async def get_sample(request: fastapi.Request, project_name: str, task_id: str):
-    static_provider = typing.cast(StaticProvider, request.state.static_provider)
+async def get_sample(project_name: str, task_id: str):
+    static_provider = typing.cast(
+        StaticProvider, shared_resources.static_provider
+    )
     sample = static_provider.get_sample(project_name, task_id)
     return sample
 
 
-def create_app():
-    @asynccontextmanager
-    async def lifespan(_: fastapi.FastAPI):
-        model_state = ModelState()
+def create_app(
+    prefix: str = "/api",
+    gen_server_host: str = "localhost",
+    gen_server_port: int = 4001,
+):
+    model_state = ModelState(
+        gen_server_host=gen_server_host,
+        gen_server_port=gen_server_port,
+    )
 
-        static_provider = StaticProvider(
-            root_dir="/home/amirreza/projects/ubc/tl_code/results"
-        )
+    static_provider = StaticProvider(
+        root_dir="/home/amirreza/projects/ubc/tl_code/results"
+    )
 
-        yield {"model_state": model_state, "static_provider": static_provider}
+    shared_resources.model_state = model_state
+    shared_resources.static_provider = static_provider
+    shared_resources.gen_server_host = gen_server_host
+    shared_resources.gen_server_port = gen_server_port
 
-    app = fastapi.FastAPI(lifespan=lifespan)
-    app.include_router(router, prefix="/api")
-    app.mount("/", StaticFiles(directory="ui", html=True), name="static")
+    app = fastapi.FastAPI(title="Orchestration Server")
+    app.include_router(router, prefix=prefix)
+    # app.mount("/", StaticFiles(directory="ui", html=True), name="static")
 
     app.add_middleware(
         CORSMiddleware,
