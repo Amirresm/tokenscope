@@ -24,7 +24,7 @@ class BatchGenerator(Generator):
         models_directory: str | None = None,
     ):
         if models_directory is None:
-            models_directory = os.getenv("MODELS_DIRECTORY", "models/")
+            models_directory = os.getenv("MODELS_DIRECTORY", "/models")
 
         print(f"Scanning models directory: {models_directory}")
         model_dirs = []

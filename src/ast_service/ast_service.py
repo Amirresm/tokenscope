@@ -42,14 +42,18 @@ class TokenInfo:
 
 
 class ASTService:
-    def __init__(self):
+    def __init__(self, tokenizer_name_or_path: str | None = None):
         self.tokenizer = AutoTokenizer.from_pretrained(
-            "/storage/c/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B"
+            tokenizer_name_or_path or "gpt2"
         )
         LANGUAGE = Language(tspython.language())
         self.parser = Parser(LANGUAGE)
         self.type_detector = TypeDetector(self.parser)
         self.block_detector = BlockDetector(self.parser)
+
+    def update_tokenizer(self, tokenizer_name_or_path: str):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+        print(f"ASTService: Updated tokenizer to {tokenizer_name_or_path}")
 
     def map_parallel(self, source_code_tokens_list: list[list[Token]]):
         if len(source_code_tokens_list) < 10:
@@ -391,83 +395,3 @@ class ASTService:
             print(f"[{color}]{token.token.token_string}[/{color}]", end="")
             last_line_number = line_number
         print()
-
-
-if __name__ == "__main__":
-    code = '''<|begin_of_text|># Below is a Python script with a self-contained function that solves the problem and passes corresponding tests:
-import numpy as np
-import itertools
-import random
-import statistics
-
-def task_func(T1, RANGE=100):
-    """
-    Convert elements in 'T1' to integers and create a list of random integers.
-    The size of the list is the sum of the integers in `T1`. Calculate and 
-    return the mean, median, and mode of the list.
-    
-    Parameters:
-    T1 (tuple of tuples): Each tuple contains string representations of integers which are converted to integers.
-    RANGE (int, optional): The upper limit for generating random integers. Default is 100.
-    
-    Returns:
-    tuple: A tuple containing the mean, median, and mode of the generated list of random integers.
-           The mean and median are floats, and the mode is an integer. The calculations use the generated
-           list whose size is determined by the sum of converted integers from `T1`.
-    
-    Requirements:
-    - numpy
-    - itertools
-    - random
-    - statistics
-
-    Raises:
-    statistics.StatisticsError if T1 is empty
-    
-    Example:
-    >>> import random
-    >>> random.seed(42)
-    >>> T1 = (('13', '17', '18', '21', '32'), ('07', '11', '13', '14', '28'), ('01', '05', '06', '08', '15', '16'))
-    >>> stats = task_func(T1)
-    >>> print(stats)
-    (49.88, 48.0, 20)
-    >>> stats = task_func(T1, RANGE=50)
-    >>> print(stats)
-    (23.773333333333333, 25.0, 15)
-    """
-    if not T1:
-        raise statistics.StatisticsError("T1 is empty")
-    T1 = [tuple(map(int, t)) for t in T1]
-    T1 = [sum(t) for t in T1]
-    T1 = [random.randint(0, RANGE) for _ in range(sum(T1))]
-    return statistics.mean(T1), statistics.median(T1), statistics.mode(T1)
-
-# The following code is used to test the function:
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()'''
-    # with open("./src/ts/block.py", "r") as f:
-    #     code = f.read()
-
-    ast_service = ASTService()
-
-    # results = ast_service.map_parallel([code] * 1000)
-    #
-    # ASTService.type_pretty_print(results[995])
-    tokenized_code = [
-        Token(
-            token_string=ast_service.tokenizer.decode([tid]),
-            token_id=tid,
-            position=-1,
-            confidence=1.0,
-            token_types=[],
-        )
-        for tid in ast_service.tokenizer.encode(code)
-    ]
-
-    results, _, _ = ast_service.map_ast_to_tokens(tokenized_code)
-
-    # ast_service.report_tokens(results)
-    ASTService.type_pretty_print(results)
-    ASTService.block_pretty_print(results)
-    ASTService.line_pretty_print(results)

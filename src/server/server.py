@@ -42,7 +42,7 @@ async def available_models(source: str):
 
 
 @router.post("/load_model")
-async def load_model(payload: dict):
+async def load_model(request: fastapi.Request, payload: dict):
     source = ModelSource(payload["source"])
     model_name_or_path = payload["model_name_or_path"]
 
@@ -54,6 +54,9 @@ async def load_model(payload: dict):
         },
     )
     response_data = response.json()
+    if response.status_code == 200:
+        model_state = typing.cast(ModelState, request.state.model_state)
+        model_state.ast_service.update_tokenizer(model_name_or_path)
 
     return response_data
 

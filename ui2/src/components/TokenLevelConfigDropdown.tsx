@@ -4,7 +4,6 @@ import {
     ChartScatterIcon,
     CheckCircleIcon,
     CrosshairIcon,
-    CrosshairSimpleIcon,
     GraphIcon,
     PaintBrushIcon,
     TargetIcon,

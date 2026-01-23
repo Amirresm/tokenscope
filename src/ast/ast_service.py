@@ -42,10 +42,8 @@ def visualize_whitespace(code: str) -> str:
 
 class ASTService:
 
-    def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-1.5B"
-        )
+    def __init__(self, tokenizer_name_or_path: str):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
 
     def get_token_types(self, raw_code: str, return_deepest: bool = False):
         atok = asttokens.ASTTokens(code, parse=True)
@@ -384,11 +382,7 @@ class ASTService:
                     str(token_id),
                     match.token[:20] if match else "-",
                     match.match_type if match else "-",
-                    (
-                        ", ".join(match.ast_types[:4])
-                        if match
-                        else "-"
-                    ),
+                    (", ".join(match.ast_types[:4]) if match else "-"),
                     match.token_class if match else "-",
                     match.modality if match else "-",
                 )

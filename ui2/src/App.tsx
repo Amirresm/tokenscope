@@ -80,13 +80,13 @@ function App() {
 
     return (
         <>
-            {/* <LLMManagementModal /> */}
-            {/* <TrendChartModal /> */}
-            {/* <RelativeAttentionModal /> */}
-            {/* <ReverseAttentionModal /> */}
-            {/* <ASTStatsChartModal /> */}
-            {/* <ASTAttentionHeatmapModal /> */}
-            {/* <PromptModal /> */}
+            <LLMManagementModal />
+            <TrendChartModal />
+            <RelativeAttentionModal />
+            <ReverseAttentionModal />
+            <ASTStatsChartModal />
+            <ASTAttentionHeatmapModal />
+            <PromptModal />
             <div className="relative flex mx-1 gap-1">
                 <MainBar />
                 <div className="grow min-w-0">
