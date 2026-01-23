@@ -5,6 +5,9 @@ import React from "react";
 import generationStore from "../../store/generationStore";
 import { GenericAstView } from "./GenericAstView";
 import astStore from "../../store/components/astStore";
+import drawerStore, {
+    DrawerTabsEnum,
+} from "../../store/components/drawerStore";
 
 type RangeSelectorProps = {
     source: string;
@@ -70,9 +73,12 @@ export function AstPage() {
                         </div>
                         <RangeSelector
                             source={source}
-                            onSelectRange={(start, end) =>
-                                (astStore.selectedRange.value = { start, end })
-                            }
+                            onSelectRange={(start, end) => {
+                                astStore.selectedRange.value = { start, end };
+                                drawerStore.setDrawerTab(
+                                    DrawerTabsEnum.ASTSTATS,
+                                );
+                            }}
                         />
                     </>
                 ) : (

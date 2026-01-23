@@ -260,13 +260,7 @@ async def get_sample(request: fastapi.Request, project_name: str, task_id: str):
 def create_app():
     @asynccontextmanager
     async def lifespan(_: fastapi.FastAPI):
-        model_path = (
-            "/storage/c/ai/models/llm/llama-3.2-3B-Instruct"
-            # "/home/amirreza/projects/ai/models/llm/llama-3.2-3B"
-            # "/home/amirreza/projects/ai/models/llm/Qwen2.5-Coder-7B"
-            # "/storage/c/ai/models/llm/Qwen/Qwen2.5-Coder-1.5B-Instruct"
-        )
-        model_state = ModelState(model_path)
+        model_state = ModelState()
 
         static_provider = StaticProvider(
             root_dir="/home/amirreza/projects/ubc/tl_code/results"

@@ -62,7 +62,8 @@ export default function AstSidebar() {
 
     return (
         <div className="w-full flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 p-5">
+                <h3 className="mt-1 mb-4 font-bold">Code Analysis Statistics</h3>
                 <button
                     className="btn btn-ghost btn-secondary mb-4"
                     onClick={() => {
@@ -72,7 +73,7 @@ export default function AstSidebar() {
                         modal.showModal();
                     }}
                 >
-                    View Stats
+                    View Statistics Plot
                 </button>
                 <button
                     className="btn btn-ghost btn-secondary mb-4"

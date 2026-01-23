@@ -8,7 +8,7 @@ import AstSidebar from "./ast-sidebar/ast-sidebar";
 
 export function Sidebar() {
     return (
-        <div className="w-80 h-full flex flex-col p-4 pl-1 pr-3">
+        <div className="w-80 h-full flex flex-col p-4 pl-1 pr-3 overflow-y-auto">
             {(() => {
                 if (drawerStore.drawerStateSignal.value.tab === "session")
                     return <SessionSidebar />;

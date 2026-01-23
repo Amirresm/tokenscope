@@ -132,7 +132,7 @@ export default function StatsSidebar() {
         <div className="w-full flex flex-col gap-2">
             <div className="card w-full bg-base-100 grow">
                 <div className="card-body">
-                    <h2 className="card-title">Stats</h2>
+                    <h2 className="card-title">Statistics</h2>
                     <button
                         className="btn btn-ghost btn-secondary mb-4"
                         onClick={() => {

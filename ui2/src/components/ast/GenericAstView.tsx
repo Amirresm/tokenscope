@@ -150,7 +150,7 @@ export function GenericAstView({
     );
 
     return (
-        <div className="min-h-0 grow overflow-y-auto whitespace-pre-wrap p-4">
+        <div className="min-h-0 grow whitespace-pre-wrap p-4">
             {groups.map((t, index) => (
                 <span
                     data-content={`#${index}: ${t.group}`}
@@ -163,8 +163,8 @@ export function GenericAstView({
                     {t.tokens.map((tk, itk) => (
                         <span
                             key={tk.token_string + tk.position}
-                            className="tooltip tooltip-bottom inline before:z-50"
-                            data-tip={`#${index} - ${itk}: ${t.group} (C: ${(parseFloat(tk.confidence) * 100).toFixed(2)}% | AC: ${(
+                            className="tooltip tooltip-bottom inline before:max-w-56"
+                            data-tip={`#${index} - ${itk}: ${t.group} (Conf.: ${(parseFloat(tk.confidence) * 100).toFixed(2)}% | Avg Conf.: ${(
                                 t.averageConfidence * 100
                             ).toFixed(2)}% for ${t.tokens.length} tokens)`}
                         >

@@ -149,6 +149,10 @@
     }
 }
 
+.tooltip::before {
+    z-index: 50;
+}
+
 .main-bg-gradient {
     background:
         linear-gradient(

@@ -17,7 +17,7 @@ class Session:
 
 
 class ModelState:
-    def __init__(self, model_path: str) -> None:
+    def __init__(self) -> None:
         self.generate_lock = threading.Lock()
         self.batch_generator = GenClient()
 
@@ -93,18 +93,18 @@ class ModelState:
 
         token_list = session.generation_tree.get_token_list(branch_id)
         filtered_token_list: list[Token] = []
-        currrent_character_pos = 0
+        current_character_pos = 0
         for t in token_list:
             token_text = t.token.token_string
             token_length = len(token_text)
-            token_end_pos = currrent_character_pos + token_length
+            token_end_pos = current_character_pos + token_length
             if token_end_pos < character_start:
-                currrent_character_pos += token_length
+                current_character_pos += token_length
                 continue
-            if currrent_character_pos > character_end:
+            if current_character_pos > character_end:
                 break
             filtered_token_list.append(t.token)
-            currrent_character_pos += token_length
+            current_character_pos += token_length
 
         filtered_token_list = [
             t for t in filtered_token_list if "special" not in t.token_types

@@ -44,13 +44,11 @@ class GeneratorProvider:
             )
         )
         assert Wrapper is not None, f"Unsupported model: {model_name_or_path}"
-        wrapper = Wrapper(model_name_or_path, q4bit=False, device="cuda")
+        wrapper = Wrapper(model_name_or_path, q4bit=False)
 
         self.generator = BatchGenerator(
             wrapper,
             stop_tokens=[ControlTokenTypes.EOS],
-            topp=5,
-            force_greedy=True,
         )
         self.model_source = ModelSource.TRANSFORMERS
         self.model_name_or_path = model_name_or_path

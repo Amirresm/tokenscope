@@ -252,7 +252,7 @@ const GenerationTokenComponent = React.memo((props: GenerationTokenProps) => {
             {/*     </span> */}
             {/* )} */}
             <div
-                className="tooltip tooltip-bottom inline before:max-w-40"
+                className="tooltip tooltip-top inline before:max-w-40"
                 data-tip={`${TokenMetrics[metric].label}: ${metricValue.toFixed(6)}`}
             >
                 {isSelected ? visualizeWhitespace(token) : token}
@@ -385,9 +385,9 @@ const GenerationView = () => {
             metricPercetiles = [];
     }
 
-    React.useEffect(() => {
-        if (isGenerating) bottomRef.current?.scrollIntoView({});
-    }, [generationList, isGenerating]);
+    // React.useEffect(() => {
+    //     if (isGenerating) bottomRef.current?.scrollIntoView({});
+    // }, [generationList, isGenerating]);
 
     return (
         <div

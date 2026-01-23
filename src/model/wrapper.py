@@ -35,17 +35,13 @@ class ModelWrapper:
     def __init__(
         self,
         model_name: str,
-        device: str = "cuda",
+        device: str | None = None,
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
     ):
         self.device = device
         if self.device == "cpu":
-            # num_cores = os.cpu_count() or 1
-            # if num_cores > 4:
-            #     num_cores = num_cores - 2
-            # torch.set_num_threads(num_cores)
             print("Using CPU device")
             print(f"Set number of CPU threads to {torch.get_num_threads()}")
         elif self.device == "cuda":
@@ -55,7 +51,8 @@ class ModelWrapper:
                 f"Using CUDA device: {torch.cuda.get_device_name(torch.cuda.current_device())}"
             )
         else:
-            raise ValueError(f"Unsupported device: {self.device}")
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"Auto-detected device: {self.device}")
 
         if model is not None and tokenizer is not None:
             self.m = model
@@ -102,9 +99,7 @@ class ModelWrapper:
         id = int(id[0]) if isinstance(id, list) else int(id)
         return (token, id)
 
-    def get_control_token_type(
-        self, token: str
-    ) ->  str | None:
+    def get_control_token_type(self, token: str) -> str | None:
         # ttype = next(
         #     (k for k, v in self.control_tokens.items() if v == token), None
         # )

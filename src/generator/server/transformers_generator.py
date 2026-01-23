@@ -21,8 +21,12 @@ class GeneratorItem:
 class BatchGenerator(Generator):
     @staticmethod
     def get_available_models(
-        models_directory="/storage/c/ai/models/llm",
+        models_directory: str | None = None,
     ):
+        if models_directory is None:
+            models_directory = os.getenv("MODELS_DIRECTORY", "models/")
+
+        print(f"Scanning models directory: {models_directory}")
         model_dirs = []
         for root, _, files in os.walk(models_directory):
             if "config.json" in files and "tokenizer_config.json" in files:
@@ -35,9 +39,6 @@ class BatchGenerator(Generator):
         self,
         model: ModelWrapper,
         default_max_tokens=50,
-        topp=1,
-        force_greedy=False,
-        thr=0.75,
         stop_tokens=[],
     ):
         self.model = model

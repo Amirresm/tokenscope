@@ -19,6 +19,7 @@ import { ASTStatsChartModal } from "./components/reports/AstStatsChart";
 import { ASTAttentionHeatmapModal } from "./components/reports/AstAttentionHeatmap";
 import { RelativeAttentionModal } from "./components/reports/RelativeAttentionChart";
 import { ReverseAttentionModal } from "./components/reports/ReverseAttentionChart";
+import generationStore from "./store/generationStore";
 
 const genTabs = [
     { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
@@ -78,41 +79,52 @@ function App() {
     const tabs = globalStore.viewMode.value === "ast" ? astTabs : genTabs;
 
     return (
-        <div className="flex mx-1 gap-1">
-            <MainBar />
-            <div className="grow min-w-0">
-                <LLMManagementModal />
-                <TrendChartModal />
-                <RelativeAttentionModal />
-                <ReverseAttentionModal />
-                <ASTStatsChartModal />
-                <ASTAttentionHeatmapModal />
-                <PromptModal />
-                <LandingPage />
-            </div>
-            <div className="sticky top-0 h-screen flex z-10">
-                <div className="flex flex-col items-center gap-2 py-4 px-1">
-                    {tabs.map(({ tab, icon: Icon, label }) => (
-                        <div
-                            className="tooltip tooltip-left"
-                            data-tip={label}
-                            key={tab}
-                        >
-                            <button
-                                className={`btn btn-ghost btn-sm btn-square ${
-                                    drawerState.tab === tab ? "btn-active" : ""
-                                }`}
-                                onClick={() => handleToggleDrawer(tab)}
-                            >
-                                <Icon />
-                            </button>
-                        </div>
-                    ))}
-                    <div className="divider divider-horizontal mx-0 grow self-center"></div>
+        <>
+            {/* <LLMManagementModal /> */}
+            {/* <TrendChartModal /> */}
+            {/* <RelativeAttentionModal /> */}
+            {/* <ReverseAttentionModal /> */}
+            {/* <ASTStatsChartModal /> */}
+            {/* <ASTAttentionHeatmapModal /> */}
+            {/* <PromptModal /> */}
+            <div className="relative flex mx-1 gap-1">
+                <MainBar />
+                <div className="grow min-w-0">
+                    <LandingPage />
                 </div>
-                {drawerOpen && <Sidebar />}
+                <div className="sticky top-0 h-screen flex z-10">
+                    <div className="flex flex-col items-center gap-2 py-4 px-1">
+                        {tabs.map(({ tab, icon: Icon, label }) => (
+                            <div
+                                className="tooltip tooltip-left"
+                                data-tip={label}
+                                key={tab}
+                            >
+                                <button
+                                    className={`btn btn-ghost btn-sm btn-square ${
+                                        drawerState.tab === tab
+                                            ? "btn-active"
+                                            : ""
+                                    }`}
+                                    onClick={() => handleToggleDrawer(tab)}
+                                    disabled={
+                                        tab !== DrawerTabsEnum.SESSION &&
+                                        (!generationStore.currentGeneration
+                                            .value ||
+                                            generationStore.currentGeneration
+                                                .value.length === 0)
+                                    }
+                                >
+                                    <Icon />
+                                </button>
+                            </div>
+                        ))}
+                        <div className="divider divider-horizontal mx-0 grow self-center"></div>
+                    </div>
+                    {drawerOpen && <Sidebar />}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
