@@ -25,8 +25,6 @@ function RangeSelector({ source, onSelectRange }: RangeSelectorProps) {
                     const start = range.startOffset;
                     const end = range.endOffset;
                     if (start !== end) {
-                        console.log("Selected range:", start, end);
-                        console.log("Selected text:", selection.toString());
                         onSelectRange(start, end);
                     }
                 }
@@ -52,15 +50,40 @@ export function AstPage() {
     const selectedRange = astStore.selectedRange.value;
     const astViewMode = astStore.astViewMode.value;
 
-    const source = generationStore.currentGeneration.value
-        ?.map((t) => t.token)
-        .join("");
+    const currentGeneration = generationStore.currentGeneration.value;
+    const source = currentGeneration?.map((t) => t.token).join("");
 
     const astDataQuery = useQuery({
         queryKey: ["atomicBlocks", sessionId, branchId, selectedRange],
         queryFn: async () => fetchASTData(sessionId, branchId, selectedRange),
         enabled: !!sessionId && !!branchId && !!selectedRange,
     });
+
+    React.useEffect(() => {
+        if (!astDataQuery.data || !currentGeneration) {
+            astStore.enrichedAstTokens.value = undefined;
+        } else {
+            const enrichedTokens = astDataQuery.data.astTokens.map(
+                (astToken) => {
+                    const genToken = currentGeneration.find(
+                        (t) =>
+                            t.position === astToken.token.position &&
+                            t.token === astToken.token.token_string,
+                    );
+                    if (!genToken) {
+                        throw new Error(
+                            `Token not found for position ${astToken.token.position} and token "${astToken.token.token_string}"`,
+                        );
+                    }
+                    return {
+                        ...astToken,
+                        token: genToken,
+                    };
+                },
+            );
+            astStore.enrichedAstTokens.value = enrichedTokens;
+        }
+    }, [astDataQuery.data]);
 
     if (!selectedRange)
         return (
@@ -106,7 +129,6 @@ export function AstPage() {
     return (
         <div className="h-full min-h-0 flex flex-col">
             <GenericAstView
-                astTokens={astDataQuery.data.astTokens}
                 groupingMode={astViewMode}
             />
             {/* {viewMode === ViewModesEnum.AtomicBlock ? ( */}

@@ -1,4 +1,4 @@
-import { GenerationTokenData } from "./generationToken";
+import { GenerationToken, GenerationTokenData } from "./generationToken";
 
 type Range = {
     start: number;
@@ -26,6 +26,18 @@ type AstMatchInfo = {
 
 export type AstTokenInfo = {
     token: GenerationTokenData;
+    match: AstMatchInfo;
+    blockId: number | null;
+    blockType: string | null;
+    blockDepth: number | null;
+    atomicBlock: AtomicBlock | null;
+    start: number;
+    end: number;
+    lineNumber: number;
+};
+
+export type EnrichedAstTokenInfo = {
+    token: GenerationToken;
     match: AstMatchInfo;
     blockId: number | null;
     blockType: string | null;

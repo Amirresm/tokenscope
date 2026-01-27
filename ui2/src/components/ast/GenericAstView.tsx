@@ -1,7 +1,8 @@
 import React from "react";
-import { AstTokenInfo, AtomicBlock } from "../../models/ast";
 import "./GenericAstView.css";
-import { GenerationTokenData } from "../../models/generationToken";
+import {
+    GenerationToken,
+} from "../../models/generationToken";
 import { getUniqueColor } from "../../utils/unqiueColorGenerator";
 import astStore, {
     ASTColorVerbosityEnum,
@@ -50,26 +51,26 @@ type GroupingMode =
     | ViewModesEnum.AtomicBlock2;
 
 type GenericAstViewProps = {
-    astTokens: AstTokenInfo[];
     groupingMode: GroupingMode;
 };
 
-export function GenericAstView({
-    astTokens,
-    groupingMode,
-}: GenericAstViewProps) {
+export function GenericAstView({ groupingMode }: GenericAstViewProps) {
+    const enrichedAstTokens = astStore.enrichedAstTokens.value;
     const astColorVerbosity = astStore.astColorVerbosity.value;
 
     const groups = React.useMemo(() => {
         const groups: {
             index: number;
             id: string;
-            tokens: GenerationTokenData[];
+            tokens: GenerationToken[];
             group: string;
             averageConfidence: number;
         }[] = [];
-        for (let i = 0; i < astTokens.length; i++) {
-            const tokenInfo = astTokens[i];
+        if (!enrichedAstTokens) {
+            return groups;
+        }
+        for (let i = 0; i < enrichedAstTokens.length; i++) {
+            const tokenInfo = enrichedAstTokens[i];
             let groupKey = "";
             switch (groupingMode) {
                 case ViewModesEnum.Type:
@@ -98,7 +99,7 @@ export function GenericAstView({
                     const lastGroup = groups[groups.length - 1];
                     lastGroup.averageConfidence = lastGroup
                         ? lastGroup.tokens.reduce(
-                              (sum, t) => sum + parseFloat(t.confidence),
+                              (sum, t) => sum + t.confidence,
                               0,
                           ) / lastGroup.tokens.length
                         : 0;
@@ -118,30 +119,26 @@ export function GenericAstView({
         if (groups.length > 0) {
             const lastGroup = groups[groups.length - 1];
             lastGroup.averageConfidence = lastGroup
-                ? lastGroup.tokens.reduce(
-                      (sum, t) => sum + parseFloat(t.confidence),
-                      0,
-                  ) / lastGroup.tokens.length
+                ? lastGroup.tokens.reduce((sum, t) => sum + t.confidence, 0) /
+                  lastGroup.tokens.length
                 : 0;
         }
         return groups;
-    }, [astTokens, groupingMode]);
+    }, [enrichedAstTokens, groupingMode]);
 
     React.useEffect(() => {
         astStore.astGroups.value = groups;
     }, [groups]);
 
     const getRangeColor = React.useCallback(
-        (token: GenerationTokenData) => {
+        (token: GenerationToken) => {
             const normalMode =
                 astColorVerbosity === ASTColorVerbosityEnum.NORMAL;
             let color = "";
             if (normalMode) {
                 color = getUniqueColor();
             } else {
-                color = `var(${getConfidenceColorClass(
-                    parseFloat(token.confidence),
-                )})`;
+                color = `var(${getConfidenceColorClass(token.confidence)})`;
             }
 
             return color;
@@ -162,9 +159,9 @@ export function GenericAstView({
                 >
                     {t.tokens.map((tk, itk) => (
                         <span
-                            key={tk.token_string + tk.position}
+                            key={tk.token + tk.position}
                             className="tooltip tooltip-bottom inline before:max-w-56"
-                            data-tip={`#${index} - ${itk}: ${t.group} (Conf.: ${(parseFloat(tk.confidence) * 100).toFixed(2)}% | Avg Conf.: ${(
+                            data-tip={`#${index} - ${itk}: ${t.group} (Conf.: ${(tk.confidence * 100).toFixed(2)}% | Avg Conf.: ${(
                                 t.averageConfidence * 100
                             ).toFixed(2)}% for ${t.tokens.length} tokens)`}
                         >
@@ -176,7 +173,7 @@ export function GenericAstView({
                                     // globalStore.viewMode.value = "generation";
                                 }}
                             >
-                                {visualizeWhitespace(tk.token_string)}
+                                {visualizeWhitespace(tk.token)}
                             </span>
                         </span>
                     ))}

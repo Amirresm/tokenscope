@@ -1,5 +1,8 @@
 import { signal } from "@preact/signals-react";
-import { GenerationTokenData } from "../../models/generationToken";
+import {
+    GenerationToken,
+} from "../../models/generationToken";
+import { EnrichedAstTokenInfo } from "../../models/ast";
 
 export enum ASTColorVerbosityEnum {
     NORMAL = "normal",
@@ -31,19 +34,22 @@ const astColorVerbosity = signal<ASTColorVerbosityEnum>(
 
 const selectedRange = signal<{ start: number; end: number } | null>(null);
 
+const enrichedAstTokens = signal<EnrichedAstTokenInfo[] | undefined>(undefined);
+
 const avgAttentionMap = signal<Record<string, Record<string, number[]>>>({});
 
 const astGroups = signal<
     {
         index: number;
         id: string;
-        tokens: GenerationTokenData[];
+        tokens: GenerationToken[];
         group: string;
         averageConfidence: number;
     }[]
 >([]);
 
 const resetAstStore = () => {
+    enrichedAstTokens.value = undefined;
     astViewMode.value = ViewModesEnum.Type;
     astColorVerbosity.value = ASTColorVerbosityEnum.NORMAL;
     selectedRange.value = null;
@@ -52,6 +58,7 @@ const resetAstStore = () => {
 };
 
 export default {
+    enrichedAstTokens,
     astViewMode,
     astColorVerbosity,
     selectedRange,

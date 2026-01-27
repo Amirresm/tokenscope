@@ -177,24 +177,9 @@ function Chart() {
                 for (const group of astGroups) {
                     avgAttentionMap[group[groupNameKey]] = {};
                     for (const token of group.tokens) {
-                        const richToken = currentGeneration?.find(
-                            (t) =>
-                                t.position === token.position &&
-                                t.token === token.token_string,
-                        );
-                        if (!richToken) {
-                            console.error(
-                                "Rich token not found for attention mapping",
-                                token,
-                            );
-                            // throw new Error(
-                            //     "Rich token not found for attention mapping",
-                            // );
-                            continue;
-                        }
-                        if (richToken.attentionSnapshot) {
+                        if (token.attentionSnapshot) {
                             const meanAttentionsPerHead =
-                                richToken.attentionSnapshot[
+                                token.attentionSnapshot[
                                     attentionTargetHead
                                 ];
                             for (const {
@@ -205,14 +190,7 @@ function Chart() {
                                 let targetGroupId = null;
                                 for (const g of astGroups) {
                                     for (const gt of g.tokens) {
-                                        const targetRichToken =
-                                            currentGeneration?.find(
-                                                (t) =>
-                                                    t.position ===
-                                                        gt.position &&
-                                                    t.token === gt.token_string,
-                                            );
-                                        if (targetRichToken && targetRichToken.position === tokenIndex) {
+                                        if (gt.position === tokenIndex) {
                                             targetGroupId = g[groupNameKey];
                                             break;
                                         }
@@ -309,7 +287,6 @@ function Chart() {
             chart.yAxes.each((yAxis) => {
                 yAxis.data.setAll(yAxisKey);
             });
-            console.log("AST Attention Heatmap data set:", data, groupIds);
         }
     }, [astGroups, currentGeneration, attentionTargetHead, isGenerating]);
 

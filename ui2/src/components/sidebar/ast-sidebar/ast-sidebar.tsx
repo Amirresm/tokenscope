@@ -1,31 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
 import React from "react";
-import { fetchASTData } from "../../../api/astAPI";
-import sessionStore from "../../../store/sessionStore";
 import astStore, {
     ASTViewModeLabels,
     ViewModesEnum,
 } from "../../../store/components/astStore";
 
 export default function AstSidebar() {
-    const sessionId = sessionStore.sessionId.value;
-    const branchId = sessionStore.branchId.value;
-    const selectedRange = astStore.selectedRange.value;
-
+    const enrichedAstTokens = astStore.enrichedAstTokens.value;
     const astViewMode = astStore.astViewMode.value;
-
-    const astDataQuery = useQuery({
-        queryKey: ["atomicBlocks", sessionId, branchId, selectedRange],
-        queryFn: async () => fetchASTData(sessionId, branchId, selectedRange),
-        enabled: !!sessionId && !!branchId && !!selectedRange,
-    });
 
     const metric = "confidence";
 
     const stats = React.useMemo(() => {
         const stats: Record<string, number[]> = {};
-        if (astDataQuery.data) {
-            for (const tokenInfo of astDataQuery.data.astTokens) {
+        if (enrichedAstTokens) {
+            for (const tokenInfo of enrichedAstTokens) {
                 let groupKey = "";
                 switch (astViewMode) {
                     case ViewModesEnum.Type:
@@ -47,7 +35,7 @@ export default function AstSidebar() {
                         groupKey = `${tokenInfo.atomicBlock?.depth} > ${tokenInfo.atomicBlock?.type}`;
                         break;
                 }
-                const metricValue = parseFloat(tokenInfo.token[metric]);
+                const metricValue = tokenInfo.token[metric];
 
                 if (groupKey in stats) {
                     stats[groupKey].push(metricValue);
@@ -58,7 +46,7 @@ export default function AstSidebar() {
         }
 
         return stats;
-    }, [astDataQuery.data, astViewMode, metric]);
+    }, [enrichedAstTokens, astViewMode, metric]);
 
     return (
         <div className="w-full flex flex-col gap-2">
