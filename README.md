@@ -4,11 +4,13 @@ TokenScope is an explainability, interpretability, and analysis tool for large l
 
 It enables interactive inspection of decoding-time uncertainty, attention patterns, alternative token candidates, and counterfactual generation paths, with a particular focus on LLM-based code generation.
 
-<p align="center">
-  <video src="https://raw.githubusercontent.com/Amirresm/tokenscope/main/supplementary/demo/demo.mp4" width="80%" controls></video>
-</p>
-
 TokenScope is intended for researchers studying LLM behavior and practitioners debugging or auditing model-generated text and code.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=HI1L1X9LruQ">
+    <img src="supplementary/demo/demo-yt-banner.png" alt="Demo" width="70%" />
+  </a>
+</p>
 
 ## Getting Started
 
