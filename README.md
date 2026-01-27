@@ -12,11 +12,14 @@ TokenScope is intended for researchers studying LLM behavior and practitioners d
   </a>
 </p>
 
+> **Note:** This repository accompanies an academic tool submission.  
+> Details will be updated after the review process.
+
 ## Getting Started
 
-### Docker
+Using Docker is the recommended way to get started with TokenScope:
 
-Using docker is the recommended way to get started with TokenScope:
+### Docker
 
 ```Bash
 git clone https://github.com/Amirresm/tokenscope.git
