@@ -19,6 +19,28 @@ type TokenGenerationData =
           content: { session_id: string; branch_id: string };
       };
 
+function linearBuckets(
+    min: number,
+    max: number,
+    numBuckets: number,
+): number[] {
+    if (numBuckets <= 0) {
+        throw new Error("numBuckets must be > 0");
+    }
+    if (min >= max) {
+        throw new Error("min must be < max");
+    }
+
+    const step = (max - min) / numBuckets;
+
+    const buckets: number[] = [];
+    for (let i = 0; i < numBuckets; i++) {
+        buckets.push(min + i * step);
+    }
+
+    return buckets;
+}
+
 function logBuckets(
     min: number,
     max: number,
@@ -184,12 +206,12 @@ const handleTokenGenerationStream = async (
         }
     }
 
-    //TEMP
-    for (const token of generationStore.currentGeneration.value) {
-        if (token.marginConfidence !== undefined) {
-            token.marginConfidence = token.confidence - token.marginConfidence;
-        }
-    }
+    // //TEMP
+    // for (const token of generationStore.currentGeneration.value) {
+    //     if (token.marginConfidence !== undefined) {
+    //         token.marginConfidence = token.confidence - token.marginConfidence;
+    //     }
+    // }
 
     // redo attention saliency
     for (const head of attentionHeads) {
@@ -310,25 +332,25 @@ const handleTokenGenerationStream = async (
     );
     const numBuckets = 5;
     const confidencePercentiles = calcAllPercentiles(confValues, numBuckets);
-    const perplexityPercentiles = calcAllPercentiles(perpValues, numBuckets);
-    const lastPerplexityPercentiles = calcAllPercentiles(
-        lastPerpValues,
-        numBuckets,
-    );
     const marginConfidencePercentiles = calcAllPercentiles(
         marginConfValues,
         numBuckets,
     );
     const entropyPercentiles = calcAllPercentiles(entropyValues, numBuckets);
+    const perplexityPercentiles = calcAllPercentiles(perpValues, numBuckets);
+    const lastPerplexityPercentiles = calcAllPercentiles(
+        lastPerpValues,
+        numBuckets,
+    );
     generationStore.confidenceTenPercentiles.value = confidencePercentiles;
     generationStore.perplexityTenPercentiles.value = perplexityPercentiles;
     generationStore.lastPerplexityTenPercentiles.value =
         lastPerplexityPercentiles;
-    generationStore.lastPerplexityTenPercentiles.value = logBuckets(
-        Math.min(...lastPerpValues),
-        Math.max(...lastPerpValues),
-        5,
-    );
+    // generationStore.lastPerplexityTenPercentiles.value = logBuckets(
+    //     Math.min(...lastPerpValues),
+    //     Math.max(...lastPerpValues),
+    //     5,
+    // );
     generationStore.marginConfidenceTenPercentiles.value =
         marginConfidencePercentiles;
     generationStore.entropyTenPercentiles.value = entropyPercentiles;

@@ -33,7 +33,10 @@ export function calcAllPercentiles<T>(
         const value = calcPercentile(data, i, accessor);
         if (value !== null) {
             percentilesValues.push(value);
+        } else {
+            percentilesValues.push(NaN);
         }
     }
-    return Array.from(new Set(percentilesValues));
+    // return Array.from(new Set(percentilesValues));
+    return percentilesValues;
 }

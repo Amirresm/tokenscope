@@ -175,7 +175,7 @@ export function Content({ token }: { token: GenerationToken }) {
                     </div>
                 )}
             </div>
-            <div className="divider" />
+            <div className="divider mb-1" />
             <div className="overflow-x-auto min-h-44">
                 <table className="table">
                     <thead>
@@ -230,7 +230,7 @@ export function Content({ token }: { token: GenerationToken }) {
                     </tbody>
                 </table>
             </div>
-            <div className="divider" />
+            <div className="divider mt-1" />
             <div>
                 {token.prompt || token.manual ? (
                     <div className="text-sm italic text-gray-500">

@@ -22,15 +22,15 @@ import { ReverseAttentionModal } from "./components/reports/ReverseAttentionChar
 import generationStore from "./store/generationStore";
 
 const genTabs = [
-    { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
-    { tab: DrawerTabsEnum.STATS, icon: ChartLineIcon, label: "Stats" },
-    { tab: DrawerTabsEnum.GENERATION, icon: ListIcon, label: "Generation" },
-    { tab: DrawerTabsEnum.ATTENTION, icon: GraphIcon, label: "Attention" },
+    { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Sessions" },
+    { tab: DrawerTabsEnum.STATS, icon: ChartLineIcon, label: "Statistics" },
+    { tab: DrawerTabsEnum.GENERATION, icon: ListIcon, label: "Token Details" },
+    { tab: DrawerTabsEnum.ATTENTION, icon: GraphIcon, label: "Attention Details" },
     // { tab: DrawerTabsEnum.PROJECTS, icon: FolderIcon, label: "Projects" },
 ];
 const astTabs = [
     { tab: DrawerTabsEnum.SESSION, icon: UserIcon, label: "Session" },
-    { tab: DrawerTabsEnum.ASTSTATS, icon: ChartLineIcon, label: "AST Stats" },
+    { tab: DrawerTabsEnum.ASTSTATS, icon: ChartLineIcon, label: "AST Statistics" },
 ];
 
 function App() {

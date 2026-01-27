@@ -63,18 +63,9 @@ export default function AstSidebar() {
     return (
         <div className="w-full flex flex-col gap-2">
             <div className="flex flex-col gap-1 p-5">
-                <h3 className="mt-1 mb-4 font-bold">Code Analysis Statistics</h3>
-                <button
-                    className="btn btn-ghost btn-secondary mb-4"
-                    onClick={() => {
-                        const modal = document.getElementById(
-                            "ast_stats_chart_modal",
-                        ) as HTMLDialogElement;
-                        modal.showModal();
-                    }}
-                >
-                    View Statistics Plot
-                </button>
+                <h3 className="mt-1 mb-4 font-bold">
+                    Code Analysis Statistics
+                </h3>
                 <button
                     className="btn btn-ghost btn-secondary mb-4"
                     onClick={() => {
@@ -86,8 +77,19 @@ export default function AstSidebar() {
                 >
                     View Attention Heatmap
                 </button>
-                <h2 className="">
-                    Average {metric} by {ASTViewModeLabels[astViewMode]}
+                <h2 className="flex justify-between items-center mb-2">
+                    Average Conf. by {ASTViewModeLabels[astViewMode]}
+                    <button
+                        className="btn btn-ghost btn-sm btn-secondary"
+                        onClick={() => {
+                            const modal = document.getElementById(
+                                "ast_stats_chart_modal",
+                            ) as HTMLDialogElement;
+                            modal.showModal();
+                        }}
+                    >
+                        Plot
+                    </button>
                 </h2>
                 <table className="table table-sm">
                     <thead>

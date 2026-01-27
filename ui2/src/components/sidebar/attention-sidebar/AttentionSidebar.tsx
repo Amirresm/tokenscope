@@ -175,7 +175,8 @@ function Content({ token }: { token: GenerationToken }) {
         avgInputAttn,
         avgOutputAttn,
         avgConf,
-        avgPPL,
+        avgMargin,
+        avgEntropy,
         avgLPPL,
     ] = React.useMemo(() => {
         let numInputs = 0;
@@ -185,7 +186,8 @@ function Content({ token }: { token: GenerationToken }) {
         let outputAttn = 0;
 
         let totalConf = 0;
-        let totalPPL = 0;
+        let totalMargin = 0;
+        let totalEntropy = 0;
         let totalLPPL = 0;
 
         const attentionSaliency =
@@ -207,7 +209,9 @@ function Content({ token }: { token: GenerationToken }) {
                             numOutputs++;
                             outputAttn += attn.attention;
                             totalConf += (t.confidence || 0) * attn.attention;
-                            totalPPL += (t.perplexity || 0) * attn.attention;
+                            totalMargin +=
+                                (t.marginConfidence || 0) * attn.attention;
+                            totalEntropy += (t.entropy || 0) * attn.attention;
                             totalLPPL +=
                                 (t.lastPerplexity || 0) * attn.attention;
                         }
@@ -218,7 +222,8 @@ function Content({ token }: { token: GenerationToken }) {
         const avgInputAttn = numInputs > 0 ? inputAttn / numInputs : 0;
         const avgOutputAttn = numOutputs > 0 ? outputAttn / numOutputs : 0;
         const avgConf = numOutputs > 0 ? totalConf / numOutputs : 0;
-        const avgPPL = numOutputs > 0 ? totalPPL / numOutputs : 0;
+        const avgMargin = numOutputs > 0 ? totalMargin / numOutputs : 0;
+        const avgEntropy = numOutputs > 0 ? totalEntropy / numOutputs : 0;
         const avgLPPL = numOutputs > 0 ? totalLPPL / numOutputs : 0;
         return [
             attentionSaliency,
@@ -227,7 +232,8 @@ function Content({ token }: { token: GenerationToken }) {
             avgInputAttn,
             avgOutputAttn,
             avgConf,
-            avgPPL,
+            avgMargin,
+            avgEntropy,
             avgLPPL,
         ];
     }, [token, currentGeneration, attentionTargetHead]);
@@ -262,8 +268,8 @@ function Content({ token }: { token: GenerationToken }) {
                     attentionTargetToken.position === token.position
                 }
             >
-                Attention to Token {attentionTargetToken?.position}:{" "}
-                {attentionTargetToken?.token}
+                Attention from Token {attentionTargetToken?.position}
+                {attentionTargetToken?.token ? `: "${attentionTargetToken.token}"` : ""}
             </button>
             <div className="divider my-2" />
             <table className="table w-full text-sm">
@@ -272,64 +278,72 @@ function Content({ token }: { token: GenerationToken }) {
                         <td>{METRICLABELS.attentionSaliency}</td>
                         <td>{attentionSaliency.toFixed(3)}</td>
                     </tr>
+                    {/* <tr> */}
+                    {/*     <td className="flex items-center gap-1"> */}
+                    {/*         Total Attention */}
+                    {/*         <div */}
+                    {/*             className="tooltip tooltip-top before:w-64" */}
+                    {/*             data-tip="Ideally 1.0, but may vary if 'Attention Top N' is too low." */}
+                    {/*         > */}
+                    {/*             <QuestionIcon size={16} /> */}
+                    {/*         </div> */}
+                    {/*     </td> */}
+                    {/*     <td> */}
+                    {/*         {( */}
+                    {/*             avgInputAttn * numInputs + */}
+                    {/*             avgOutputAttn * numOutputs */}
+                    {/*         ).toFixed(3)} */}
+                    {/*     </td> */}
+                    {/* </tr> */}
+                    {/* <tr> */}
+                    {/*     <td>Total Attention to Inputs</td> */}
+                    {/*     <td>{(avgInputAttn * numInputs).toFixed(3)}</td> */}
+                    {/* </tr> */}
+                    {/* <tr> */}
+                    {/*     <td>Total Attention to Outputs</td> */}
+                    {/*     <td>{(avgOutputAttn * numOutputs).toFixed(3)}</td> */}
+                    {/* </tr> */}
                     <tr>
-                        <td className="flex items-center gap-1">
-                            Total Attention
-                            <div
-                                className="tooltip tooltip-top before:w-64"
-                                data-tip="Ideally 1.0, but may vary if 'Attention Top N' is too low."
-                            >
-                                <QuestionIcon size={16} />
-                            </div>
-                        </td>
-                        <td>
-                            {(
-                                avgInputAttn * numInputs +
-                                avgOutputAttn * numOutputs
-                            ).toFixed(3)}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Total Attention to Inputs</td>
-                        <td>{(avgInputAttn * numInputs).toFixed(3)}</td>
-                    </tr>
-                    <tr>
-                        <td>Total Attention to Outputs</td>
-                        <td>{(avgOutputAttn * numOutputs).toFixed(3)}</td>
-                    </tr>
-
-                    <tr>
-                        <td>Number of Input Tokens</td>
+                        <td>Number of Attended Prompt Tokens</td>
                         <td>{numInputs}</td>
                     </tr>
                     <tr>
-                        <td>Number of Output Tokens</td>
+                        <td>Number of Attended Output Tokens</td>
                         <td>{numOutputs}</td>
                     </tr>
                     <tr>
-                        <td>Average Input Attention</td>
+                        <td>Average Attention to Prompt</td>
                         <td>{avgInputAttn.toFixed(3)}</td>
                     </tr>
                     <tr>
-                        <td>Average Output Attention</td>
+                        <td>Average Attention to Output</td>
                         <td>{avgOutputAttn.toFixed(3)}</td>
                     </tr>
                     <tr>
                         <td>
-                            Average {METRICLABELS.confidence} (Output Tokens)
+                            Average {METRICLABELS.confidence} of Attended Output
+                            Tokens
                         </td>
                         <td>{avgConf.toFixed(3)}</td>
                     </tr>
                     <tr>
                         <td>
-                            Average {METRICLABELS.perplexity} (Output Tokens)
+                            Average {METRICLABELS.marginConfidence} of Attended
+                            Output Tokens
                         </td>
-                        <td>{avgPPL.toFixed(3)}</td>
+                        <td>{avgMargin.toFixed(3)}</td>
                     </tr>
                     <tr>
                         <td>
-                            Average {METRICLABELS.lastPerplexity} (Output
-                            Tokens)
+                            Average {METRICLABELS.entropy} of Attended Output
+                            Tokens
+                        </td>
+                        <td>{avgEntropy.toFixed(3)}</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Average {METRICLABELS.lastPerplexity} of Attended
+                            Output Tokens
                         </td>
                         <td>{avgLPPL.toFixed(3)}</td>
                     </tr>

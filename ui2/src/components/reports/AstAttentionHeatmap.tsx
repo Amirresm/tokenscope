@@ -5,7 +5,10 @@ import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Dark from "@amcharts/amcharts5/themes/Dark";
 import am5themes_Material from "@amcharts/amcharts5/themes/Material";
 import * as am5plugins_exporting from "@amcharts/amcharts5/plugins/exporting";
-import astStore, { ASTViewModeLabels, ViewModesEnum } from "../../store/components/astStore";
+import astStore, {
+    ASTViewModeLabels,
+    ViewModesEnum,
+} from "../../store/components/astStore";
 import generationStore from "../../store/generationStore";
 
 type DataPoint = {
@@ -200,14 +203,19 @@ function Chart() {
                             } of meanAttentionsPerHead) {
                                 // find the group and token for tokenIndex
                                 let targetGroupId = null;
-                                let findIndex = 0;
                                 for (const g of astGroups) {
-                                    for (let i = 0; i < g.tokens.length; i++) {
-                                        if (findIndex === tokenIndex) {
+                                    for (const gt of g.tokens) {
+                                        const targetRichToken =
+                                            currentGeneration?.find(
+                                                (t) =>
+                                                    t.position ===
+                                                        gt.position &&
+                                                    t.token === gt.token_string,
+                                            );
+                                        if (targetRichToken && targetRichToken.position === tokenIndex) {
                                             targetGroupId = g[groupNameKey];
                                             break;
                                         }
-                                        findIndex++;
                                     }
                                     if (targetGroupId) {
                                         break;

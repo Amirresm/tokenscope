@@ -25,7 +25,7 @@ export function LandingPage() {
 
     return (
         <ReactFlowProvider>
-            <div className="flex flex-col grow min-h-full">
+            <div className="flex flex-col grow h-full">
                 <MainHeader />
                 <div className="bg-base-200 mx-4 mt-2 mb-4 rounded-lg border-base-300 border grow min-h-0">
                     {viewMode === "generation" ? (

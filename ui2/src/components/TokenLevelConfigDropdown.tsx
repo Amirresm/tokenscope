@@ -98,7 +98,7 @@ export function TokenLevelConfigDropdown() {
         >
             <div className="flex flex-col gap-2 text-sm">
                 <h3 className="px-4 mb-4 font-semibold text-lg">
-                    Token Level View Config
+                    Token Level View Settings
                 </h3>
                 <div className="flex justify-between items-center px-4">
                     Color Verbosity

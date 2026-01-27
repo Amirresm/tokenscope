@@ -142,7 +142,7 @@ export default function StatsSidebar() {
                             modal.showModal();
                         }}
                     >
-                        Show Trend Chart
+                        View Trends Chart
                     </button>
 
                     <div className="stats stats-vertical shadow">

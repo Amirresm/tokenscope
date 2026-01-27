@@ -55,12 +55,12 @@ function Content() {
             let prompt = "";
             if (target === "prompt") {
                 prompt = promptTokens
-                    .filter((t) => !t.tokenTypes.includes("special"))
+                    // .filter((t) => !t.tokenTypes.includes("special"))
                     .map((t) => t.token)
                     .join("");
             } else {
                 prompt = manualContinueTokens
-                    .filter((t) => !t.tokenTypes.includes("special"))
+                    // .filter((t) => !t.tokenTypes.includes("special"))
                     .map((t) => t.token)
                     .join("");
             }

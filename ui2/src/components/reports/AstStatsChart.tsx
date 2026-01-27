@@ -105,6 +105,8 @@ function Chart() {
                     renderer: yRenderer,
                 }),
             );
+            yAxis.set("min", 0);
+            yAxis.set("max", 1)
 
             if (chart.yAxes.indexOf(yAxis) > 0) {
                 yAxis.set("syncWithAxis", chart.yAxes.getIndex(0));

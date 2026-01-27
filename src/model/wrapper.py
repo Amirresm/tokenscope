@@ -140,7 +140,7 @@ class LlamaModelWrapper(ModelWrapper):
     def __init__(
         self,
         model_name: str,
-        device: str = "cuda",
+        device: str | None = None,
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
@@ -161,7 +161,7 @@ class QwenModelWrapper(ModelWrapper):
     def __init__(
         self,
         model_name: str,
-        device: str = "cuda",
+        device: str | None = None,
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
@@ -180,7 +180,7 @@ class GenericModelWrapper(ModelWrapper):
     def __init__(
         self,
         model_name: str,
-        device: str = "cuda",
+        device: str | None = None,
         model: Optional[ModelType] = None,
         tokenizer: Optional[TokenizerType] = None,
         q4bit: bool = False,
