@@ -106,6 +106,26 @@ function Chart() {
                 categoryField: "position",
             }),
         );
+
+        const tooltip = xAxis.set(
+            "tooltip",
+            am5.Tooltip.new(root, {
+                labelText: `[fontSize: 12px]{position}: '{tokenString}'[/]`,
+            }),
+        );
+        const background = tooltip.get("background");
+        if (background)
+            background.adapters.add("fill", function (fill) {
+                if (tooltip.dataItem) {
+                    return (tooltip.dataItem.dataContext as DataPoint).color;
+                }
+                return fill;
+            });
+
+        tooltip.on("pointTo", function () {
+            const background = tooltip.get("background");
+            if (background) background.set("fill", background.get("fill"));
+        });
         xAxis
             .get("renderer")
             .labels.template.adapters.add("text", function (text, target) {
@@ -205,27 +225,6 @@ function Chart() {
 
                 return bullet;
             });
-
-            const tooltip = series.set(
-                "tooltip",
-                am5.Tooltip.new(root, {
-                    labelText: `[fontSize: 10px]{position}: '{tokenString}'\n${METRICLABELS[m]}: {${m}}[/]`,
-                }),
-            );
-            const background = tooltip.get("background");
-            if (background)
-                background.adapters.add("fill", function (fill) {
-                    if (tooltip.dataItem) {
-                        return (tooltip.dataItem.dataContext as DataPoint)
-                            .color;
-                    }
-                    return fill;
-                });
-
-            tooltip.on("pointTo", function () {
-                const background = tooltip.get("background");
-                if (background) background.set("fill", background.get("fill"));
-            });
         }
 
         // Add legend
@@ -278,18 +277,29 @@ function Chart() {
         if (chartRef.current) {
             const chart = chartRef.current;
 
-            const data: DataPoint[] = currentGeneration.map((token) => ({
-                x: token.position,
-                position: token.position + 1,
-                tokenString: visualizeWhitespace(token.token),
-                isPromptOrManual: token.prompt || token.manual || false,
-                confidence: token.confidence || 0,
-                perplexity: token.perplexity || 0,
-                lastPerplexity: token.lastPerplexity || 0,
-                marginConfidence: token.marginConfidence || 0,
-                entropy: token.entropy || 0,
-                color: "#10b981",
-            }));
+            const data: DataPoint[] = currentGeneration.map((token) => {
+                const isPromptOrManual = token.prompt || token.manual || false;
+                const isSelected =
+                    selectedToken && token.position === selectedToken.position;
+                let color = "#10b981";
+                if (isSelected) {
+                    color = "#1e90ff";
+                } else if (isPromptOrManual) {
+                    color = "#ff621f";
+                }
+                return {
+                    x: token.position,
+                    position: token.position + 1,
+                    tokenString: visualizeWhitespace(token.token),
+                    isPromptOrManual: isPromptOrManual,
+                    confidence: token.confidence || 0,
+                    perplexity: token.perplexity || 0,
+                    lastPerplexity: token.lastPerplexity || 0,
+                    marginConfidence: token.marginConfidence || 0,
+                    entropy: token.entropy || 0,
+                    color: color,
+                };
+            });
 
             // const [lpplMin, lpplMax] = getOutliers(
             //     data.map((d) => d.lastPerplexity),
@@ -392,7 +402,37 @@ function Chart() {
         }
     }, [currentGeneration.length, selectedToken, 2]);
 
-    return <div id="chartdiv" style={{ width: "100%", height: "100%" }}></div>;
+    return (
+        <div className="flex flex-col h-full">
+            <div id="chartdiv" className="grow" style={{ width: "100%", height: "100%" }}></div>
+            <div className="flex justify-center gap-1">
+                <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                        if (chartRef.current) {
+                            for (const series of chartRef.current.series) {
+                                series.hide();
+                            }
+                        }
+                    }}
+                >
+                    Hide All
+                </button>
+                <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                        if (chartRef.current) {
+                            for (const series of chartRef.current.series) {
+                                series.show();
+                            }
+                        }
+                    }}
+                >
+                    Show All
+                </button>
+            </div>
+        </div>
+    );
 }
 
 export function TrendChartModal() {
