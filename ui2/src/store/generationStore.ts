@@ -29,7 +29,7 @@ const generationSettings = signal<GenerationSettings>({
     temp: "1",
     alternatives: 5,
     attentionLayer: -1,
-    attentionTopN: 10,
+    attentionTopN: 100,
 });
 
 const updateGenerationSettings = (newSettings: Partial<GenerationSettings>) => {
