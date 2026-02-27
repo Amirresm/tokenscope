@@ -27,7 +27,12 @@ class GenClient(Generator):
         attention_top_n=10,
         log_metric=False,
     ) -> typing.Generator[list[GeneratorItem], None, None]:
-        with connect(f"ws://{self.host}:{self.port}/gen/ws") as websocket:
+        with connect(
+            f"ws://{self.host}:{self.port}/gen/ws",
+            open_timeout=600,
+            ping_interval=None,
+            ping_timeout=None,
+        ) as websocket:
             init_message = {
                 "prompt": prompts,
                 "prompts_tokens": (
